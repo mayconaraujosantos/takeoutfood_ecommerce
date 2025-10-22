@@ -1,0 +1,61 @@
+server:
+  port: 8761
+
+spring:
+  application:
+    name: service-discovery
+
+  cloud:
+    config:
+      enabled: false
+
+  profiles:
+    active: standalone
+
+eureka:
+  instance:
+    hostname: localhost
+    prefer-ip-address: false
+
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+  server:
+    enable-self-preservation: false
+    eviction-interval-timer-in-ms: 4000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    com.netflix.eureka: DEBUG
+    com.netflix.discovery: DEBUG
+    root: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+---
+spring:
+  config:
+    activate:
+      on-profile: standalone
+
+eureka:
+  server:
+    enable-self-preservation: false
+
+logging:
+  level:
+    com.netflix.eureka: INFO
+    com.netflix.discovery: INFO
