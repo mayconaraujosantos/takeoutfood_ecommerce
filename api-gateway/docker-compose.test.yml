@@ -1,0 +1,102 @@
+version: "3.8"
+
+# Docker Compose para testar o API Gateway localmente
+# Este arquivo sobe apenas a infraestrutura necessária para o gateway
+
+services:
+  # Redis para rate limiting
+  redis:
+    image: redis:7-alpine
+    container_name: ifood-redis
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - ifood-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Config Server
+  config-server:
+    build:
+      context: ../config-server
+      dockerfile: Dockerfile
+    container_name: ifood-config-server
+    ports:
+      - "8888:8888"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    networks:
+      - ifood-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Service Discovery
+  service-discovery:
+    build:
+      context: ../service-discovery
+      dockerfile: Dockerfile
+    container_name: ifood-service-discovery
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - CONFIG_SERVER_URL=http://config-server:8888
+    depends_on:
+      config-server:
+        condition: service_healthy
+    networks:
+      - ifood-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ifood-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - CONFIG_SERVER_URL=http://config-server:8888
+      - EUREKA_SERVER_URL=http://service-discovery:8761
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=mySecretKey123456789012345678901234567890123456789012345678901234567890
+    depends_on:
+      config-server:
+        condition: service_healthy
+      service-discovery:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ifood-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  redis-data:
+
+networks:
+  ifood-network:
+    driver: bridge
