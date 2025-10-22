@@ -1,0 +1,157 @@
+server:
+  port: 8080
+  netty:
+    connection-timeout: 10s
+    idle-timeout: 60s
+
+spring:
+  application:
+    name: api-gateway
+
+  # Redis configuration for rate limiting
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6380}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2s
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+
+  cloud:
+    gateway:
+      # Discovery configuration
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+
+      # Default filters applied to all routes
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+        - AddResponseHeader=X-Gateway-Version, 1.0.0
+        - AddResponseHeader=X-Gateway-Timestamp, #{T(java.time.LocalDateTime).now()}
+
+      # Global CORS configuration
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        corsConfigurations:
+          "[/**]":
+            allowCredentials: true
+            allowedOriginPatterns:
+              - "http://localhost:*"
+              - "https://*.ifoodclone.com"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            exposedHeaders:
+              - X-Trace-ID
+              - X-Gateway-Version
+            maxAge: 3600
+
+      # HTTP client configuration
+      httpclient:
+        connect-timeout: 10000
+        response-timeout: 30s
+        pool:
+          max-connections: 100
+          acquire-timeout: 45s
+
+# Circuit Breaker configuration
+resilience4j:
+  circuitbreaker:
+    instances:
+      auth-service:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+      user-service:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+      restaurant-service:
+        sliding-window-size: 15
+        minimum-number-of-calls: 8
+        failure-rate-threshold: 60
+        wait-duration-in-open-state: 20s
+      menu-service:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 60
+        wait-duration-in-open-state: 20s
+      order-service:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 40
+        wait-duration-in-open-state: 45s
+      payment-service:
+        sliding-window-size: 8
+        minimum-number-of-calls: 4
+        failure-rate-threshold: 30
+        wait-duration-in-open-state: 60s
+      delivery-service:
+        sliding-window-size: 12
+        minimum-number-of-calls: 6
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+      review-service:
+        sliding-window-size: 15
+        minimum-number-of-calls: 8
+        failure-rate-threshold: 60
+        wait-duration-in-open-state: 20s
+
+# JWT configuration
+jwt:
+  secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890123456789012345678901234567890}
+  expiration: 86400000 # 24 hours
+  issuer: ifood-clone-api
+  algorithm: HS512
+
+# Logging configuration
+logging:
+  level:
+    com.ifoodclone.gateway: DEBUG
+    org.springframework.cloud.gateway: INFO
+    org.springframework.web.reactive: DEBUG
+    io.netty: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId}] %logger{36} - %msg%n"
+
+# Management and monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+
+# Gateway-specific monitoring
+gateway:
+  monitoring:
+    enabled: true
+    metrics:
+      requests: true
+      routes: true
+      circuit-breakers: true
