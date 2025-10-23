@@ -59,6 +59,7 @@ spring:
   redis:
     host: localhost
     port: 6380
+    username: ifood_user
     password: ifood_redis_pass
     timeout: 2000ms
     lettuce:

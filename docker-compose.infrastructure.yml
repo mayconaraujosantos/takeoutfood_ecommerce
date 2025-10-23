@@ -84,13 +84,27 @@ services:
     container_name: ifood-redis
     ports:
       - "6380:6379"
-    command: redis-server --appendonly yes --requirepass ifood_redis_pass
+    command: >
+      redis-server 
+      --appendonly yes 
+      --requirepass ifood_redis_pass
+      --user ifood_user on +@all ~* &ifood_redis_pass
+      --user default off
     volumes:
       - redis_data:/data
     networks:
       - ifood-network
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "ifood_redis_pass", "ping"]
+      test:
+        [
+          "CMD",
+          "redis-cli",
+          "--user",
+          "ifood_user",
+          "-a",
+          "ifood_redis_pass",
+          "ping",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
