@@ -1,0 +1,257 @@
+services:
+  # Infrastructure Services
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ifood_db
+      POSTGRES_USER: ifood_user
+      POSTGRES_PASSWORD: ifood_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  mongodb:
+    image: mongo:7.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ifood_user
+      MONGO_INITDB_ROOT_PASSWORD: ifood_pass
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  # Microservices
+  config-server:
+    build: ./config-server
+    ports:
+      - "8888:8888"
+    environment:
+      SPRING_PROFILES_ACTIVE: native
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
+
+  service-discovery:
+    build: ./service-discovery
+    ports:
+      - "8761:8761"
+    depends_on:
+      - config-server
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - service-discovery
+      - config-server
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_SERVER_URL: http://service-discovery:8761
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
+
+  auth-service:
+    build: ./auth-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - service-discovery
+      - config-server
+      - postgres
+      - redis
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_SERVER_URL: http://service-discovery:8761
+      DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+      REDIS_URL: redis://redis:6379
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
+
+  user-service:
+    build: ./user-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - service-discovery
+      - config-server
+      - postgres
+      - kafka
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_SERVER_URL: http://service-discovery:8761
+      DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
+
+  restaurant-service:
+    build: ./restaurant-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - service-discovery
+      - config-server
+      - postgres
+      - kafka
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_SERVER_URL: http://service-discovery:8761
+      DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+  menu-service:
+    build: ./menu-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      - service-discovery
+      - config-server
+      - postgres
+      - kafka
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_SERVER_URL: http://service-discovery:8761
+      DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+  order-service:
+    build: ./order-service
+    ports:
+      - "8085:8085"
+    depends_on:
+      - service-discovery
+      - config-server
+      - postgres
+      - kafka
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_SERVER_URL: http://service-discovery:8761
+      DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+  payment-service:
+    build: ./payment-service
+    ports:
+      - "8086:8086"
+    depends_on:
+      - service-discovery
+      - config-server
+      - postgres
+      - kafka
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_SERVER_URL: http://service-discovery:8761
+      DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+  notification-service:
+    build: ./notification-service
+    ports:
+      - "8087:8087"
+    depends_on:
+      - service-discovery
+      - config-server
+      - mongodb
+      - kafka
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_SERVER_URL: http://service-discovery:8761
+      MONGODB_URI: mongodb://ifood_user:ifood_pass@mongodb:27017/ifood_notifications
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
+
+  delivery-service:
+    build: ./delivery-service
+    ports:
+      - "8088:8088"
+    depends_on:
+      - service-discovery
+      - config-server
+      - postgres
+      - kafka
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_SERVER_URL: http://service-discovery:8761
+      DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+  review-service:
+    build: ./review-service
+    ports:
+      - "8089:8089"
+    depends_on:
+      - service-discovery
+      - config-server
+      - mongodb
+      - kafka
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_SERVER_URL: http://service-discovery:8761
+      MONGODB_URI: mongodb://ifood_user:ifood_pass@mongodb:27017/ifood_reviews
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+volumes:
+  postgres_data:
+  mongo_data:
+  redis_data:
+
+networks:
+  default:
+    name: ifood-network
