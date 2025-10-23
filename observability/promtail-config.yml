@@ -1,0 +1,163 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Configuration for Spring Boot application logs from files
+  - job_name: ifood-microservices-files
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: ifood-microservices
+          env: local
+          __path__: /var/log/ifood/**/*.log
+
+    pipeline_stages:
+      # Parse Spring Boot log format
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3})\s+(?P<level>\w+)\s+(?P<pid>\d+)\s+---\s+\[\s*(?P<thread>[^\]]+)\]\s+(?P<logger>[^\s]+)\s*:\s*(?P<message>.*)$'
+
+      # Convert timestamp to RFC3339 format
+      - timestamp:
+          source: timestamp
+          format: "2006-01-02 15:04:05.000"
+          location: America/Sao_Paulo
+
+      # Add labels based on parsed data
+      - labels:
+          level:
+          thread:
+          logger:
+          service:
+
+  # Configuration for Docker container logs
+  - job_name: docker-containers
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: label
+            values: ["logging=promtail"]
+
+    relabel_configs:
+      # Extract container name as service label
+      - source_labels: ["__meta_docker_container_name"]
+        regex: "/(.*)"
+        target_label: "service"
+        replacement: "${1}"
+
+      # Extract image name
+      - source_labels:
+          ["__meta_docker_container_label_com_docker_compose_service"]
+        target_label: "compose_service"
+
+      # Set job label
+      - target_label: "job"
+        replacement: "docker-logs"
+
+      # Set environment
+      - target_label: "env"
+        replacement: "docker"
+
+    pipeline_stages:
+      # Parse JSON logs from Docker
+      - json:
+          expressions:
+            timestamp: time
+            message: log
+            stream: stream
+
+      # Parse Spring Boot logs within Docker JSON
+      - regex:
+          source: message
+          expression: '^(?P<spring_timestamp>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3})\s+(?P<level>\w+)\s+(?P<pid>\d+)\s+---\s+\[\s*(?P<thread>[^\]]+)\]\s+(?P<logger>[^\s]+)\s*:\s*(?P<spring_message>.*)$'
+
+      # Use Spring Boot timestamp if available, otherwise use Docker timestamp
+      - timestamp:
+          source: spring_timestamp
+          format: "2006-01-02 15:04:05.000"
+          location: America/Sao_Paulo
+          fallback_formats:
+            - RFC3339
+
+      # Add Spring Boot specific labels
+      - labels:
+          level:
+          thread:
+          logger:
+          stream:
+
+  # Configuration for microservice-specific patterns
+  - job_name: auth-service-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: auth-service
+          service: auth-service
+          env: local
+          __path__: /var/log/ifood/auth-service*.log
+
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3})\s+(?P<level>\w+)\s+(?P<pid>\d+)\s+---\s+\[\s*(?P<thread>[^\]]+)\]\s+(?P<logger>[^\s]+)\s*:\s*(?P<message>.*)$'
+
+      - timestamp:
+          source: timestamp
+          format: "2006-01-02 15:04:05.000"
+          location: America/Sao_Paulo
+
+      # Extract JWT and authentication related information
+      - regex:
+          source: message
+          expression: "(?i)(jwt|token|auth|login|user|security)"
+          action: keep
+
+      - labels:
+          level:
+          thread:
+          logger:
+          auth_related: "true"
+
+  - job_name: api-gateway-logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: api-gateway
+          service: api-gateway
+          env: local
+          __path__: /var/log/ifood/api-gateway*.log
+
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3})\s+(?P<level>\w+)\s+(?P<pid>\d+)\s+---\s+\[\s*(?P<thread>[^\]]+)\]\s+(?P<logger>[^\s]+)\s*:\s*(?P<message>.*)$'
+
+      - timestamp:
+          source: timestamp
+          format: "2006-01-02 15:04:05.000"
+          location: America/Sao_Paulo
+
+      # Extract HTTP request information
+      - regex:
+          source: message
+          expression: '(?P<method>GET|POST|PUT|DELETE|PATCH)\s+(?P<path>/[^\s]*)\s+(?P<status>\d{3})?.*(?P<duration>\d+ms)?'
+
+      - labels:
+          level:
+          thread:
+          logger:
+          method:
+          http_status: status
+          gateway_request: "true"
+
+limits_config:
+  readline_rate: 10000
+  readline_burst: 20000
