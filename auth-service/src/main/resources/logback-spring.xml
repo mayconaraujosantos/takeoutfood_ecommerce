@@ -50,30 +50,40 @@
             </encoder>
         </appender>
 
-        <!-- Loki appender for direct log shipping -->
-        <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
-            <http>
-                <url>http://loki:3100/loki/api/v1/push</url>
-            </http>
-            <format>
-                <label>
-                    <pattern>service=auth-service,env=${SPRING_PROFILES_ACTIVE:-local},level=%level</pattern>
-                </label>
-                <message>
-                    <pattern>
-                        {
-                        "timestamp": "%d{yyyy-MM-dd HH:mm:ss.SSS}",
-                        "level": "%level",
-                        "thread": "%thread",
-                        "logger": "%logger{36}",
-                        "message": "%message",
-                        "traceId": "%X{traceId:-}",
-                        "spanId": "%X{spanId:-}"
-                        }
-                    </pattern>
-                </message>
-            </format>
-        </appender>
+        <!-- Loki appender for direct log shipping (only when observability is enabled) -->
+        <springProfile name="docker,prod">
+            <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+                <http>
+                    <url>http://loki:3100/loki/api/v1/push</url>
+                </http>
+                <format>
+                    <label>
+                        <pattern>
+                            service=auth-service,env=${SPRING_PROFILES_ACTIVE:-local},level=%level</pattern>
+                    </label>
+                    <message>
+                        <pattern>
+                            {
+                            "timestamp": "%d{yyyy-MM-dd HH:mm:ss.SSS}",
+                            "level": "%level",
+                            "thread": "%thread",
+                            "logger": "%logger{36}",
+                            "message": "%message",
+                            "traceId": "%X{traceId:-}",
+                            "spanId": "%X{spanId:-}"
+                            }
+                        </pattern>
+                    </message>
+                </format>
+            </appender>
+
+            <!-- Async Loki appender -->
+            <appender name="ASYNC_LOKI" class="ch.qos.logback.classic.AsyncAppender">
+                <appender-ref ref="LOKI" />
+                <queueSize>512</queueSize>
+                <discardingThreshold>0</discardingThreshold>
+            </appender>
+        </springProfile>
 
         <!-- Async appenders for better performance -->
         <appender name="ASYNC_JSON_FILE" class="ch.qos.logback.classic.AsyncAppender">
@@ -81,12 +91,6 @@
             <queueSize>512</queueSize>
             <discardingThreshold>0</discardingThreshold>
             <includeCallerData>true</includeCallerData>
-        </appender>
-
-        <appender name="ASYNC_LOKI" class="ch.qos.logback.classic.AsyncAppender">
-            <appender-ref ref="LOKI" />
-            <queueSize>512</queueSize>
-            <discardingThreshold>0</discardingThreshold>
         </appender>
     </springProfile>
 
@@ -133,37 +137,71 @@
     </springProfile>
 
     <!-- Logger configurations -->
-    <logger name="com.ifoodclone.auth" level="INFO" additivity="false">
-        <appender-ref ref="CONSOLE" />
-        <appender-ref ref="ASYNC_JSON_FILE" />
-        <appender-ref ref="ASYNC_LOKI" />
-    </logger>
+    <springProfile name="dev,test">
+        <logger name="com.ifoodclone.auth" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="ASYNC_JSON_FILE" />
+        </logger>
 
-    <!-- Security and authentication specific logging -->
-    <logger name="org.springframework.security" level="DEBUG" additivity="false">
-        <appender-ref ref="CONSOLE" />
-        <appender-ref ref="ASYNC_JSON_FILE" />
-        <appender-ref ref="ASYNC_LOKI" />
-    </logger>
+        <!-- Security and authentication specific logging -->
+        <logger name="org.springframework.security" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="ASYNC_JSON_FILE" />
+        </logger>
 
-    <!-- JWT related logging -->
-    <logger name="io.jsonwebtoken" level="INFO" additivity="false">
-        <appender-ref ref="CONSOLE" />
-        <appender-ref ref="ASYNC_JSON_FILE" />
-        <appender-ref ref="ASYNC_LOKI" />
-    </logger>
+        <!-- JWT related logging -->
+        <logger name="io.jsonwebtoken" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="ASYNC_JSON_FILE" />
+        </logger>
 
-    <!-- Redis operations -->
-    <logger name="org.springframework.data.redis" level="DEBUG" additivity="false">
-        <appender-ref ref="CONSOLE" />
-        <appender-ref ref="ASYNC_JSON_FILE" />
-        <appender-ref ref="ASYNC_LOKI" />
-    </logger>
+        <!-- Redis operations -->
+        <logger name="org.springframework.data.redis" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="ASYNC_JSON_FILE" />
+        </logger>
 
-    <!-- Root logger -->
-    <root level="INFO">
-        <appender-ref ref="CONSOLE" />
-        <appender-ref ref="ASYNC_JSON_FILE" />
-        <appender-ref ref="ASYNC_LOKI" />
-    </root>
+        <!-- Root logger -->
+        <root level="INFO">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="ASYNC_JSON_FILE" />
+        </root>
+    </springProfile>
+
+    <!-- Production and Docker profiles with Loki -->
+    <springProfile name="docker,prod">
+        <logger name="com.ifoodclone.auth" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="ASYNC_JSON_FILE" />
+            <appender-ref ref="ASYNC_LOKI" />
+        </logger>
+
+        <!-- Security and authentication specific logging -->
+        <logger name="org.springframework.security" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="ASYNC_JSON_FILE" />
+            <appender-ref ref="ASYNC_LOKI" />
+        </logger>
+
+        <!-- JWT related logging -->
+        <logger name="io.jsonwebtoken" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="ASYNC_JSON_FILE" />
+            <appender-ref ref="ASYNC_LOKI" />
+        </logger>
+
+        <!-- Redis operations -->
+        <logger name="org.springframework.data.redis" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="ASYNC_JSON_FILE" />
+            <appender-ref ref="ASYNC_LOKI" />
+        </logger>
+
+        <!-- Root logger -->
+        <root level="INFO">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="ASYNC_JSON_FILE" />
+            <appender-ref ref="ASYNC_LOKI" />
+        </root>
+    </springProfile>
 </configuration>
