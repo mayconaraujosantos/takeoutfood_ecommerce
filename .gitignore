@@ -286,3 +286,4 @@ experiments/
 # Local configuration overrides
 override/
 local-config/
+.history/
