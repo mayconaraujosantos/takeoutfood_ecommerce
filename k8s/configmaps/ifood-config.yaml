@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ifood-config
+  labels:
+    app: ifood-clone
+data:
+  # Database configurations
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+
+  # Service discovery
+  EUREKA_SERVER_URL: "http://service-discovery:8761"
+  CONFIG_SERVER_URL: "http://config-server:8888"
+
+  # Kafka configurations
+  KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+
+  # MongoDB configurations
+  MONGODB_HOST: "mongodb"
+  MONGODB_PORT: "27017"
+
+  # Application configurations
+  SPRING_PROFILES_ACTIVE: "k8s"
