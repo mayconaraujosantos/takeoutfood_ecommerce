@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: api-gateway
+  main:
+    web-application-type: reactive
+    allow-bean-definition-overriding: false
   config:
     import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
   cloud:
@@ -21,6 +24,15 @@ spring:
         locator:
           enabled: true
           lower-case-service-id: true
+      metrics:
+        enabled: true
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins: "*"
+            allowed-methods: "*"
+            allowed-headers: "*"
+            allow-credentials: false
       routes:
         # Health endpoint for testing without config server
         - id: gateway-health
@@ -31,7 +43,9 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6380}
+      password: ${REDIS_PASSWORD:ifood_redis_pass}
       timeout: 2s
+      connect-timeout: 2s
 
 eureka:
   client:
@@ -58,5 +72,8 @@ management:
 
 logging:
   level:
-    com.ifoodclone.gateway: INFO
-    org.springframework.cloud.gateway: INFO
+    '[com.ifoodclone.gateway]': INFO
+    '[org.springframework.cloud.gateway]': INFO
+    '[org.springframework.cloud.netflix.eureka]': DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
