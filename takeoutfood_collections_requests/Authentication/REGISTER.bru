@@ -1,0 +1,30 @@
+meta {
+  name: REGISTER
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://localhost:8081/api/auth/register
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "teste_logs2@ifood.com",
+    "password": "senha123456",
+    "firstName": "Teste",
+    "lastName": "Logs2",
+    "phone": "11987654321",
+    "role": "CUSTOMER"
+  }
+}
+
+settings {
+  encodeUrl: false
+}

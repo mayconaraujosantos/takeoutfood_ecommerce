@@ -1,0 +1,20 @@
+meta {
+  name: TOKENS
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://localhost:8081/api/dev/token/validate
+  body: none
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJkZXZlbG9wZXIiLCJyb2xlIjoiQURNSU4iLCJ0ZWFtIjoiZGV2ZWxvcG1lbnQiLCJ0eXBlIjoiREVWX1RPS0VOIiwiaWF0IjoxNzYxMTkwODE5LCJleHAiOjE3NjM3ODI4MTl9.h9ia8khsugdsg4pDrnJ23TcBWHIjnuPTnSgi_TpjECcnXU9U8ryGlgJPgouS8Uwv
+}
+
+settings {
+  encodeUrl: false
+  timeout: 0
+}
