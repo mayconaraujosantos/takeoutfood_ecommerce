@@ -29,11 +29,153 @@ spring:
           enabled: true
           lower-case-service-id: true
 
+      # Route definitions
+      routes:
+        # Authentication Service - Public routes (no authentication required)
+        - id: auth-service-public
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/v1/auth/login,/api/v1/auth/register,/api/v1/auth/forgot-password,/api/v1/auth/reset-password,/api/v1/auth/verify-email,/api/v1/auth/refresh-token
+            - Method=POST
+          filters:
+            - AddResponseHeader=X-Route-Type, public
+            - AddResponseHeader=X-Service-Name, auth-service
+            - StripPrefix=3
+
+        # Authentication Service - Protected routes
+        - id: auth-service-protected
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - name: AuthFilter
+              args:
+                requireAuth: true
+            - AddResponseHeader=X-Route-Type, protected
+            - AddResponseHeader=X-Service-Name, auth-service
+            - StripPrefix=3
+
+        # User Management Service - Protected routes
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/v1/users/**
+          filters:
+            - name: AuthFilter
+              args:
+                requireAuth: true
+            - AddResponseHeader=X-Route-Type, protected
+            - AddResponseHeader=X-Service-Name, user-service
+            - StripPrefix=3
+
+        # Restaurant Management Service - Protected routes
+        - id: restaurant-service
+          uri: lb://restaurant-service
+          predicates:
+            - Path=/api/v1/restaurants/**
+          filters:
+            - name: AuthFilter
+              args:
+                requireAuth: true
+            - AddResponseHeader=X-Route-Type, protected
+            - AddResponseHeader=X-Service-Name, restaurant-service
+            - StripPrefix=3
+
+        # Menu Management Service - Protected routes
+        - id: menu-service
+          uri: lb://menu-service
+          predicates:
+            - Path=/api/v1/menus/**
+          filters:
+            - name: AuthFilter
+              args:
+                requireAuth: true
+            - AddResponseHeader=X-Route-Type, protected
+            - AddResponseHeader=X-Service-Name, menu-service
+            - StripPrefix=3
+
+        # Order Management Service - Protected routes
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/v1/orders/**
+          filters:
+            - name: AuthFilter
+              args:
+                requireAuth: true
+            - AddResponseHeader=X-Route-Type, protected
+            - AddResponseHeader=X-Service-Name, order-service
+            - StripPrefix=3
+
+        # Payment Processing Service - Protected routes
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/v1/payments/**
+          filters:
+            - name: AuthFilter
+              args:
+                requireAuth: true
+            - AddResponseHeader=X-Route-Type, protected
+            - AddResponseHeader=X-Service-Name, payment-service
+            - StripPrefix=3
+
+        # Notification Service - Protected routes
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/v1/notifications/**
+          filters:
+            - name: AuthFilter
+              args:
+                requireAuth: true
+            - AddResponseHeader=X-Route-Type, protected
+            - AddResponseHeader=X-Service-Name, notification-service
+            - StripPrefix=3
+
+        # Delivery Management Service - Protected routes
+        - id: delivery-service
+          uri: lb://delivery-service
+          predicates:
+            - Path=/api/v1/deliveries/**
+          filters:
+            - name: AuthFilter
+              args:
+                requireAuth: true
+            - AddResponseHeader=X-Route-Type, protected
+            - AddResponseHeader=X-Service-Name, delivery-service
+            - StripPrefix=3
+
+        # Review Management Service - Protected routes
+        - id: review-service
+          uri: lb://review-service
+          predicates:
+            - Path=/api/v1/reviews/**
+          filters:
+            - name: AuthFilter
+              args:
+                requireAuth: true
+            - AddResponseHeader=X-Route-Type, protected
+            - AddResponseHeader=X-Service-Name, review-service
+            - StripPrefix=3
+
+        # Health checks (public)
+        - id: health-checks
+          uri: lb://service-discovery
+          predicates:
+            - Path=/health,/actuator/health
+          filters:
+            - AddResponseHeader=X-Route-Type, health
+
       # Default filters applied to all routes
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
         - AddResponseHeader=X-Gateway-Version, 1.0.0
-        - AddResponseHeader=X-Gateway-Timestamp, #{T(java.time.LocalDateTime).now()}
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: 10
+            redis-rate-limiter.burstCapacity: 20
+            redis-rate-limiter.requestedTokens: 1
 
       # Global CORS configuration
       globalcors:
@@ -64,7 +206,7 @@ spring:
         response-timeout: 30s
         pool:
           max-connections: 100
-          acquire-timeout: 45s
+          acquire-timeout: 45000
 
 # Circuit Breaker configuration
 resilience4j:
