@@ -8,6 +8,8 @@ import com.ifoodclone.auth.entity.User;
 import com.ifoodclone.auth.repository.RefreshTokenRepository;
 import com.ifoodclone.auth.repository.UserRepository;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,9 +20,20 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
+
 @Service
 @Transactional
 public class AuthService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
+    private static final String SERVICE_NAME = "auth-service";
+    private static final String SERVICE_VERSION = "1.0.0";
+    private final Tracer tracer;
 
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
@@ -40,43 +53,72 @@ public class AuthService {
             UserRepository userRepository,
             RefreshTokenRepository refreshTokenRepository,
             PasswordEncoder passwordEncoder,
-            CustomUserDetailsService userDetailsService) {
+            CustomUserDetailsService userDetailsService,
+            OpenTelemetry openTelemetry) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.userDetailsService = userDetailsService;
+        this.tracer = openTelemetry.getTracer(SERVICE_NAME, SERVICE_VERSION);
     }
 
     /**
      * Autenticar usuário e gerar tokens
      */
     public AuthDto.LoginResponse login(AuthDto.LoginRequest request) {
-        try {
+        Span span = tracer.spanBuilder("auth.service.login")
+                .setAttribute("service.name", SERVICE_NAME)
+                .setAttribute("operation", "user.authentication")
+                .setAttribute("user.email", request.getEmail())
+                .startSpan();
+
+        try (Scope scope = span.makeCurrent()) {
+            span.addEvent("authentication.started");
+
+            // Log estruturado
+            logger.info("Iniciando autenticação para usuário: {}", request.getEmail());
+
             // Verificar se o usuário existe e está ativo
+            span.addEvent("user.lookup.started");
             User user = userRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new RuntimeException("Credenciais inválidas"));
 
+            span.addEvent("user.validation.started")
+                    .setAttribute("user.id", user.getId())
+                    .setAttribute("user.active", user.getActive())
+                    .setAttribute("user.locked", !user.isAccountNonLocked());
+
             // Verificar se a conta não está bloqueada
             if (!user.isAccountNonLocked()) {
+                span.setStatus(StatusCode.ERROR, "Account locked")
+                        .addEvent("authentication.failed.account_locked");
                 throw new RuntimeException("Conta temporariamente bloqueada devido a muitas tentativas de login");
             }
 
             // Verificar se a conta está ativa
             if (!user.getActive()) {
+                span.setStatus(StatusCode.ERROR, "Account inactive")
+                        .addEvent("authentication.failed.account_inactive");
                 throw new RuntimeException("Conta inativa");
             }
 
             // Tentar autenticar
+            span.addEvent("credential.validation.started");
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
             User authenticatedUser = (User) userDetails;
 
+            span.addEvent("authentication.successful")
+                    .setAttribute("user.role", authenticatedUser.getRole().toString());
+
             // Reset tentativas de login após sucesso
             if (authenticatedUser.getFailedLoginAttempts() > 0) {
+                span.addEvent("failed.attempts.reset")
+                        .setAttribute("previous.failed.attempts", authenticatedUser.getFailedLoginAttempts());
                 userRepository.resetFailedLoginAttempts(authenticatedUser.getId());
             }
 
@@ -84,11 +126,18 @@ public class AuthService {
             userRepository.updateLastLoginTime(authenticatedUser.getId(), LocalDateTime.now());
 
             // Gerar tokens
+            span.addEvent("token.generation.started");
             String accessToken = jwtService.generateToken(userDetails);
             String refreshToken = jwtService.generateRefreshToken(userDetails);
 
             // Salvar refresh token
             saveRefreshToken(authenticatedUser, refreshToken, request.getDeviceInfo(), request.getIpAddress());
+
+            span.addEvent("login.completed")
+                    .setAttribute("result.status", "success");
+            span.setStatus(StatusCode.OK);
+
+            logger.info("Usuário autenticado com sucesso: {} (ID: {})", request.getEmail(), authenticatedUser.getId());
 
             // Criar resposta
             return AuthDto.LoginResponse.builder()
@@ -101,17 +150,37 @@ public class AuthService {
                     .build();
 
         } catch (AuthenticationException ex) {
+            span.recordException(ex)
+                    .setStatus(StatusCode.ERROR, "Authentication failed: " + ex.getMessage())
+                    .addEvent("authentication.failed.invalid_credentials")
+                    .setAttribute("error.type", ex.getClass().getSimpleName());
+
             // Incrementar tentativas de login falhadas
             userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
                 userRepository.incrementFailedLoginAttempts(user.getId());
 
                 // Verificar se deve bloquear a conta
                 if (user.getFailedLoginAttempts() + 1 >= maxLoginAttempts) {
+                    span.addEvent("account.locked")
+                            .setAttribute("failed.attempts", user.getFailedLoginAttempts() + 1);
                     userRepository.lockAccount(user.getId(), LocalDateTime.now());
                 }
             });
 
+            logger.warn("Falha na autenticação para usuário: {} - {}", request.getEmail(), ex.getMessage());
             throw new RuntimeException("Credenciais inválidas");
+
+        } catch (Exception e) {
+            span.recordException(e)
+                    .setStatus(StatusCode.ERROR, "Login failed: " + e.getMessage())
+                    .addEvent("login.failed.unexpected_error")
+                    .setAttribute("error.type", e.getClass().getSimpleName());
+
+            logger.error("Erro inesperado durante login para usuário: {}", request.getEmail(), e);
+            throw e;
+
+        } finally {
+            span.end();
         }
     }
 
@@ -119,10 +188,16 @@ public class AuthService {
      * Registrar novo usuário
      */
     public AuthDto.UserInfo register(AuthDto.RegisterRequest request) {
+        logger.info("Iniciando processo de registro - Email: {}, Role: {}",
+                request.getEmail(), request.getRole());
+
         // Verificar se o email já existe
         if (userRepository.existsByEmail(request.getEmail())) {
+            logger.warn("Tentativa de registro com email já existente: {}", request.getEmail());
             throw new RuntimeException("Email já cadastrado");
         }
+
+        logger.debug("Email disponível para registro: {}", request.getEmail());
 
         // Criar novo usuário
         User user = User.builder()
@@ -140,7 +215,11 @@ public class AuthService {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
+        logger.debug("Salvando usuário no banco de dados: {}", request.getEmail());
         user = userRepository.save(user);
+
+        logger.info("Usuário registrado com sucesso - ID: {}, Email: {}, UserType: {}",
+                user.getId(), user.getEmail(), user.getRole());
 
         return buildUserInfo(user);
     }
@@ -266,5 +345,38 @@ public class AuthService {
                 .lastLoginAt(user.getLastLoginAt())
                 .createdAt(user.getCreatedAt())
                 .build();
+    }
+
+    /**
+     * Get user by ID
+     */
+    public AuthDto.UserInfo getUserById(Long userId) {
+        Span span = tracer.spanBuilder("auth.getUserById")
+                .setAttribute("service.name", SERVICE_NAME)
+                .setAttribute("operation", "user.get_by_id")
+                .setAttribute("user.id", userId.toString())
+                .startSpan();
+
+        try (Scope scope = span.makeCurrent()) {
+            logger.debug("Buscando usuário por ID: {}", userId);
+
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+            span.addEvent("user.found")
+                    .setAttribute("user.email", user.getEmail())
+                    .setAttribute("user.role", user.getRole().toString());
+            span.setStatus(StatusCode.OK);
+
+            return buildUserInfo(user);
+
+        } catch (Exception ex) {
+            span.recordException(ex)
+                    .setStatus(StatusCode.ERROR, "Get user by ID failed: " + ex.getMessage());
+            logger.error("Erro ao buscar usuário por ID: {}", userId, ex);
+            throw ex;
+        } finally {
+            span.end();
+        }
     }
 }

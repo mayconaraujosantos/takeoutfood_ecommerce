@@ -25,11 +25,18 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
         format_sql: false
 
+  security:
+    user:
+      name: test
+      password: test
+      roles: USER
+
 logging:
   level:
     com.ifoodclone.auth: WARN
     org.springframework.security: WARN
     org.hibernate: WARN
+    org.springframework.web: DEBUG
 
 app:
   jwt:
@@ -40,3 +47,7 @@ app:
 eureka:
   client:
     enabled: false
+
+management:
+  endpoints:
+    enabled-by-default: false

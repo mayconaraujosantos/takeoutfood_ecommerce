@@ -1,0 +1,54 @@
+spring:
+  datasource:
+    # Configurado dinamicamente pelo TestContainers
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+  data:
+    redis:
+      # Configurado dinamicamente pelo TestContainers
+
+# Disable security for integration tests
+security:
+  enabled: false
+
+# JWT Configuration for tests
+app:
+  jwt:
+    secret: dGVzdFNlY3JldEtleUZvckpXVFRlc3RpbmdQdXJwb3Nlc1dpdGhNaW5pbXVtTGVuZ3RoUmVxdWlyZWQ=
+    expiration: 60000 # 1 minute for faster testing
+    refresh-expiration: 300000 # 5 minutes for faster testing
+  security:
+    account:
+      max-login-attempts: 5
+      lockout-duration: 900000
+
+# Eureka Client Configuration (disable for tests)
+eureka:
+  client:
+    enabled: false
+
+# Logging Configuration
+logging:
+  level:
+    com.ifoodclone: INFO
+    org.springframework.security: WARN
+    org.testcontainers: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

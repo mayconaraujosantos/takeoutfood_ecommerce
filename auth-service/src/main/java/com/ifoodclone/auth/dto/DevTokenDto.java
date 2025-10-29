@@ -22,5 +22,6 @@ public class DevTokenDto {
     private String usage;
 
     // Informações adicionais para desenvolvimento
+    @Builder.Default
     private String swaggerInstructions = "1. Copie o token acima\n2. Clique em 'Authorize' no Swagger\n3. Cole: Bearer {seu_token}\n4. Clique em 'Authorize'";
 }

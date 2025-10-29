@@ -2,11 +2,10 @@ package com.ifoodclone.auth.config;
 
 import java.util.Arrays;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -25,6 +24,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@ConditionalOnProperty(name = "security.enabled", havingValue = "true", matchIfMissing = true)
 public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
@@ -45,14 +45,6 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
-    }
-
-    @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
@@ -64,40 +56,46 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
+                // Spring Security 6.5+ modern approach - configure authentication inline
+                .userDetailsService(userDetailsService)
                 .authorizeHttpRequests(auth -> auth
-                        // Endpoints públicos
-                        .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/refresh").permitAll()
-                        .requestMatchers("/api/auth/password/reset", "/api/auth/password/reset/confirm").permitAll()
-                        .requestMatchers("/api/auth/email/verify").permitAll()
+                        // Endpoints públicos - Profissional API v1
+                        .requestMatchers("/api/v1/auth/login", "/api/v1/auth/register", "/api/v1/auth/refresh")
+                        .permitAll()
+                        .requestMatchers("/api/v1/auth/password/reset", "/api/v1/auth/password/reset/confirm")
+                        .permitAll()
+                        .requestMatchers("/api/v1/auth/email/verify").permitAll()
 
                         // Development endpoints (local/dev profile only)
                         .requestMatchers("/api/dev/**").permitAll()
 
                         // Health check endpoints
-                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/info", "/actuator/metrics").permitAll()
+
+                        // Tracing test endpoints
+                        .requestMatchers("/api/test/**", "/api/tracing/**").permitAll()
 
                         // Swagger/OpenAPI (ambiente de desenvolvimento)
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
 
-                        // Admin endpoints
-                        .requestMatchers("/api/auth/admin/**").hasRole("ADMIN")
+                        // Admin endpoints - Profissional API v1
+                        .requestMatchers("/api/v1/auth/admin/**").hasRole("ADMIN")
 
-                        // Restaurant owner endpoints
-                        .requestMatchers("/api/auth/restaurant/**").hasAnyRole("ADMIN", "RESTAURANT_OWNER")
+                        // Restaurant owner endpoints - Profissional API v1
+                        .requestMatchers("/api/v1/auth/restaurant/**").hasAnyRole("ADMIN", "RESTAURANT_OWNER")
 
-                        // Delivery endpoints
-                        .requestMatchers("/api/auth/delivery/**").hasAnyRole("ADMIN", "DELIVERY_PERSON")
+                        // Delivery endpoints - Profissional API v1
+                        .requestMatchers("/api/v1/auth/delivery/**").hasAnyRole("ADMIN", "DELIVERY_PERSON")
 
-                        // User endpoints
-                        .requestMatchers("/api/auth/user/**")
+                        // User endpoints - Profissional API v1
+                        .requestMatchers("/api/v1/auth/user/**")
                         .hasAnyRole("ADMIN", "CUSTOMER", "RESTAURANT_OWNER", "DELIVERY_PERSON")
 
-                        // Profile endpoints - qualquer usuário autenticado
-                        .requestMatchers("/api/auth/profile/**").authenticated()
+                        // Profile endpoints - qualquer usuário autenticado - Profissional API v1
+                        .requestMatchers("/api/v1/auth/profile/**").authenticated()
 
                         // Outros endpoints requerem autenticação
                         .anyRequest().authenticated())
-                .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
