@@ -30,6 +30,11 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ifood_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   mongodb:
     image: mongo:7.0
@@ -40,6 +45,11 @@ services:
       - "27018:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7.2-alpine
@@ -48,6 +58,11 @@ services:
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   # Microservices
   config-server:
@@ -60,13 +75,27 @@ services:
       - "logging=promtail"
     volumes:
       - ./logs:/app/logs
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8888/actuator/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   service-discovery:
     build: ./service-discovery
     ports:
       - "8761:8761"
     depends_on:
-      - config-server
+      config-server:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
@@ -83,7 +112,7 @@ services:
       - service-discovery
       - config-server
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: prod
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_SERVER_URL: http://service-discovery:8761
     labels:
@@ -96,30 +125,49 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      - service-discovery
-      - config-server
-      - postgres
-      - redis
+      service-discovery:
+        condition: service_started
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: dev
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_SERVER_URL: http://service-discovery:8761
       DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
-      REDIS_URL: redis://redis:6379
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ifood_db
+      DB_USER: ifood_user
+      DB_PASSWORD: ifood_pass
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_USER: ifood_user
+      REDIS_PASSWORD: ifood_redis_pass
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
     labels:
       - "logging=promtail"
     volumes:
       - ./logs:/app/logs
+    restart: on-failure
 
   user-service:
     build: ./user-service
     ports:
       - "8082:8082"
     depends_on:
-      - service-discovery
-      - config-server
-      - postgres
-      - kafka
+      service-discovery:
+        condition: service_started
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
@@ -136,10 +184,14 @@ services:
     ports:
       - "8083:8083"
     depends_on:
-      - service-discovery
-      - config-server
-      - postgres
-      - kafka
+      service-discovery:
+        condition: service_started
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
@@ -152,10 +204,14 @@ services:
     ports:
       - "8084:8084"
     depends_on:
-      - service-discovery
-      - config-server
-      - postgres
-      - kafka
+      service-discovery:
+        condition: service_started
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
@@ -168,10 +224,14 @@ services:
     ports:
       - "8085:8085"
     depends_on:
-      - service-discovery
-      - config-server
-      - postgres
-      - kafka
+      service-discovery:
+        condition: service_started
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
@@ -184,10 +244,14 @@ services:
     ports:
       - "8086:8086"
     depends_on:
-      - service-discovery
-      - config-server
-      - postgres
-      - kafka
+      service-discovery:
+        condition: service_started
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
@@ -200,10 +264,14 @@ services:
     ports:
       - "8087:8087"
     depends_on:
-      - service-discovery
-      - config-server
-      - mongodb
-      - kafka
+      service-discovery:
+        condition: service_started
+      config-server:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
@@ -220,10 +288,14 @@ services:
     ports:
       - "8088:8088"
     depends_on:
-      - service-discovery
-      - config-server
-      - postgres
-      - kafka
+      service-discovery:
+        condition: service_started
+      config-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
@@ -236,10 +308,14 @@ services:
     ports:
       - "8089:8089"
     depends_on:
-      - service-discovery
-      - config-server
-      - mongodb
-      - kafka
+      service-discovery:
+        condition: service_started
+      config-server:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      kafka:
+        condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
