@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" 
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
-         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.ifoodclone</groupId>
@@ -32,12 +31,14 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        
-        <spring-boot.version>3.4.0</spring-boot.version>
-        <spring-cloud.version>2024.0.0</spring-cloud.version>
-        <testcontainers.version>1.20.3</testcontainers.version>
+
+        <spring-boot.version>3.2.11</spring-boot.version>
+        <spring-cloud.version>2023.0.3</spring-cloud.version>
+        <testcontainers.version>1.19.8</testcontainers.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <lombok.version>1.18.36</lombok.version>
+        <opentelemetry.version>1.42.1</opentelemetry.version>
+        <opentelemetry-instrumentation.version>2.8.0</opentelemetry-instrumentation.version>
     </properties>
 
     <dependencyManagement>
@@ -50,7 +51,7 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            
+
             <!-- Spring Cloud BOM -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
@@ -68,6 +69,24 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
+            <!-- OpenTelemetry BOM -->
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-bom</artifactId>
+                <version>${opentelemetry.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- OpenTelemetry Instrumentation BOM -->
+            <dependency>
+                <groupId>io.opentelemetry.instrumentation</groupId>
+                <artifactId>opentelemetry-instrumentation-bom</artifactId>
+                <version>${opentelemetry-instrumentation.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -77,7 +96,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
-        
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
@@ -111,65 +130,74 @@
     </dependencies>
 
     <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>${spring-boot.version}</version>
-                <configuration>
-                    <excludes>
-                        <exclude>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </exclude>
-                    </excludes>
-                </configuration>
-            </plugin>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.11.0</version>
+                    <configuration>
+                        <source>21</source>
+                        <target>21</target>
+                        <annotationProcessorPaths>
+                            <path>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                                <version>${lombok.version}</version>
+                            </path>
+                            <path>
+                                <groupId>org.mapstruct</groupId>
+                                <artifactId>mapstruct-processor</artifactId>
+                                <version>${mapstruct.version}</version>
+                            </path>
+                        </annotationProcessorPaths>
+                    </configuration>
+                </plugin>
+                
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
+                    <configuration>
+                        <excludes>
+                            <exclude>
+                                <groupId>org.projectlombok</groupId>
+                                <artifactId>lombok</artifactId>
+                            </exclude>
+                        </excludes>
+                    </configuration>
+                </plugin>
 
+                <plugin>
+                    <groupId>com.google.cloud.tools</groupId>
+                    <artifactId>jib-maven-plugin</artifactId>
+                    <version>3.4.0</version>
+                    <configuration>
+                        <from>
+                            <image>eclipse-temurin:21-jre-alpine</image>
+                        </from>
+                        <to>
+                            <image>ifood-clone/${project.artifactId}:${project.version}</image>
+                        </to>
+                        <container>
+                            <jvmFlags>
+                                <jvmFlag>-Xms512m</jvmFlag>
+                                <jvmFlag>-Xmx1g</jvmFlag>
+                            </jvmFlags>
+                            <ports>
+                                <port>8080</port>
+                            </ports>
+                            <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
+                        </container>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        
+        <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
-                <configuration>
-                    <source>21</source>
-                    <target>21</target>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version>
-                        </path>
-                        <path>
-                            <groupId>org.mapstruct</groupId>
-                            <artifactId>mapstruct-processor</artifactId>
-                            <version>${mapstruct.version}</version>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>com.google.cloud.tools</groupId>
-                <artifactId>jib-maven-plugin</artifactId>
-                <version>3.4.0</version>
-                <configuration>
-                    <from>
-                        <image>eclipse-temurin:21-jre-alpine</image>
-                    </from>
-                    <to>
-                        <image>ifood-clone/${project.artifactId}:${project.version}</image>
-                    </to>
-                    <container>
-                        <jvmFlags>
-                            <jvmFlag>-Xms512m</jvmFlag>
-                            <jvmFlag>-Xmx1g</jvmFlag>
-                        </jvmFlags>
-                        <ports>
-                            <port>8080</port>
-                        </ports>
-                        <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
-                    </container>
-                </configuration>
             </plugin>
         </plugins>
     </build>
