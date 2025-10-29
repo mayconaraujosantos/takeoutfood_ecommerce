@@ -1,0 +1,67 @@
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "1.0.0"
+tag_format = "$version"
+version_files = [
+    "pom.xml:version"
+]
+
+[tool.commitizen.customize]
+message_template = "{{change_type}}({{scope}}): {{subject}}"
+example = "feat(auth-service): add JWT token generation"
+schema = "<type>(<scope>): <subject>"
+schema_pattern = "^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|security)(\\([a-z-]+\\))?: .{1,50}"
+
+[[tool.commitizen.customize.questions]]
+type = "list"
+name = "change_type"
+message = "Select the type of change you are committing:"
+choices = [
+    {value = "feat", name = "feat: A new feature"},
+    {value = "fix", name = "fix: A bug fix"},
+    {value = "docs", name = "docs: Documentation only changes"},
+    {value = "style", name = "style: Changes that do not affect the meaning of the code"},
+    {value = "refactor", name = "refactor: A code change that neither fixes a bug nor adds a feature"},
+    {value = "test", name = "test: Adding missing tests or correcting existing tests"},
+    {value = "chore", name = "chore: Changes to the build process or auxiliary tools"},
+    {value = "perf", name = "perf: A code change that improves performance"},
+    {value = "ci", name = "ci: Changes to our CI configuration files and scripts"},
+    {value = "build", name = "build: Changes that affect the build system or external dependencies"},
+    {value = "security", name = "security: Security improvements"}
+]
+
+[[tool.commitizen.customize.questions]]
+type = "list"
+name = "scope"
+message = "Select the scope of this change:"
+choices = [
+    "config-server",
+    "service-discovery", 
+    "api-gateway",
+    "auth-service",
+    "user-service", 
+    "restaurant-service",
+    "menu-service",
+    "order-service", 
+    "payment-service",
+    "delivery-service",
+    "notification-service",
+    "review-service",
+    "database",
+    "docker",
+    "monitoring", 
+    "security",
+    "docs",
+    "ci"
+]
+
+[[tool.commitizen.customize.questions]]
+type = "input" 
+name = "subject"
+message = "Write a short description of the change:"
+
+[[tool.commitizen.customize.questions]]
+type = "input"
+name = "body"
+message = "Provide additional contextual information (optional):"
+required = false
