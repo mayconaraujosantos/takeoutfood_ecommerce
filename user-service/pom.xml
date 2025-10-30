@@ -8,6 +8,7 @@
         <groupId>com.ifoodclone</groupId>
         <artifactId>ifood-clone-parent</artifactId>
         <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>user-service</artifactId>

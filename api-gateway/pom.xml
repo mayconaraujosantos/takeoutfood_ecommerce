@@ -8,6 +8,7 @@
         <groupId>com.ifoodclone</groupId>
         <artifactId>ifood-clone-parent</artifactId>
         <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>api-gateway</artifactId>
@@ -89,6 +90,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- SpringDoc OpenAPI WebFlux for API Gateway Documentation -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
+            <version>2.3.0</version>
         </dependency>
 
         <!-- Test dependencies -->
