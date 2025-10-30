@@ -86,7 +86,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/restaurant/**").hasAnyRole("ADMIN", "RESTAURANT_OWNER")
 
                         // Delivery endpoints
-                        .requestMatchers("/api/auth/delivery/**").hasAnyRole("ADMIN", "DELIVERY_PERSON")
+                        .requestMatchers("/api/auth/delivery/**").hasAnyRole("ADMIN", "DELIVERY_DRIVER")
 
                         // User endpoints
                         .requestMatchers("/api/auth/user/**")

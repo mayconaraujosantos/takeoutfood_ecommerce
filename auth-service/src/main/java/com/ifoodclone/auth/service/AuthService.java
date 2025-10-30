@@ -124,14 +124,18 @@ public class AuthService {
             throw new RuntimeException("Email já cadastrado");
         }
 
-        // Criar novo usuário
+        // Definir role padrão para registros públicos: sempre CUSTOMER.
+        // Ignorar role enviada pelo cliente para evitar elevação de privilégio.
+        User.UserRole role = User.UserRole.CUSTOMER;
+
+        // Criar novo usuário (role pública forçada para CUSTOMER)
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .phone(request.getPhone())
-                .role(request.getRole())
+                .role(role)
                 .active(true)
                 .emailVerified(false)
                 .phoneVerified(false)

@@ -2,6 +2,7 @@ package com.ifoodclone.gateway.filter;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,7 +23,7 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> {
 
-    @Value("${jwt.secret}")
+    @Value("${app.jwt.secret:${JWT_SECRET:}}")
     private String jwtSecret;
 
     public AuthFilter() {
@@ -51,8 +52,12 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
                 }
                 
                 Claims claims = getClaims(token);
+                // Prefer userId claim if present, otherwise fallback to subject
+                Object userIdClaim = claims.get("userId");
+                String userIdHeader = userIdClaim != null ? String.valueOf(userIdClaim) : claims.getSubject();
+
                 ServerHttpRequest modifiedRequest = request.mutate()
-                    .header("X-User-Id", claims.getSubject())
+                    .header("X-User-Id", userIdHeader)
                     .header("X-User-Role", claims.get("role", String.class))
                     .build();
                 
@@ -67,7 +72,19 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
 
     private boolean isValidToken(String token) {
         try {
-            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+            // Accept base64-encoded secret (same format as auth-service) or raw bytes
+            byte[] keyBytes;
+            if (jwtSecret == null || jwtSecret.isEmpty()) {
+                return false;
+            }
+            try {
+                // Try base64 decode first (this matches auth-service JwtService)
+                keyBytes = Decoders.BASE64.decode(jwtSecret);
+            } catch (Exception ex) {
+                keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+            }
+
+            SecretKey key = Keys.hmacShaKeyFor(keyBytes);
             Jwts.parser()
                 .verifyWith(key)
                 .build()
@@ -79,7 +96,14 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
     }
 
     private Claims getClaims(String token) {
-        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(jwtSecret);
+        } catch (Exception ex) {
+            keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+        }
+
+        SecretKey key = Keys.hmacShaKeyFor(keyBytes);
         return Jwts.parser()
             .verifyWith(key)
             .build()
