@@ -7,6 +7,12 @@ import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * OpenAPI Configuration for API Gateway
+ * 
+ * Centralizes API documentation for all microservices through the gateway.
+ * This provides a single entry point for all API documentation.
+ */
 @Configuration
 public class OpenApiConfig {
 
@@ -17,63 +23,63 @@ public class OpenApiConfig {
         // Authentication Service API
         groups.add(GroupedOpenApi.builder()
                 .group("auth-service")
-                .displayName("Authentication Service API v1")
+                .displayName("Authentication Service")
                 .pathsToMatch("/api/v1/auth/**")
                 .build());
 
         // User Management Service API
         groups.add(GroupedOpenApi.builder()
                 .group("user-service")
-                .displayName("User Management Service API v1")
+                .displayName("User Management Service")
                 .pathsToMatch("/api/v1/users/**")
                 .build());
 
         // Restaurant Management Service API
         groups.add(GroupedOpenApi.builder()
                 .group("restaurant-service")
-                .displayName("Restaurant Management Service API v1")
+                .displayName("Restaurant Management Service")
                 .pathsToMatch("/api/v1/restaurants/**")
                 .build());
 
         // Menu Management Service API
         groups.add(GroupedOpenApi.builder()
                 .group("menu-service")
-                .displayName("Menu Management Service API v1")
+                .displayName("Menu Management Service")
                 .pathsToMatch("/api/v1/menus/**")
                 .build());
 
         // Order Management Service API
         groups.add(GroupedOpenApi.builder()
                 .group("order-service")
-                .displayName("Order Management Service API v1")
+                .displayName("Order Management Service")
                 .pathsToMatch("/api/v1/orders/**")
                 .build());
 
         // Payment Processing Service API
         groups.add(GroupedOpenApi.builder()
                 .group("payment-service")
-                .displayName("Payment Processing Service API v1")
+                .displayName("Payment Processing Service")
                 .pathsToMatch("/api/v1/payments/**")
                 .build());
 
         // Delivery Management Service API
         groups.add(GroupedOpenApi.builder()
                 .group("delivery-service")
-                .displayName("Delivery Management Service API v1")
+                .displayName("Delivery Management Service")
                 .pathsToMatch("/api/v1/deliveries/**")
                 .build());
 
         // Review Management Service API
         groups.add(GroupedOpenApi.builder()
                 .group("review-service")
-                .displayName("Review Management Service API v1")
+                .displayName("Review Management Service")
                 .pathsToMatch("/api/v1/reviews/**")
                 .build());
 
         // Notification Service API
         groups.add(GroupedOpenApi.builder()
                 .group("notification-service")
-                .displayName("Notification Service API v1")
+                .displayName("Notification Service")
                 .pathsToMatch("/api/v1/notifications/**")
                 .build());
 
