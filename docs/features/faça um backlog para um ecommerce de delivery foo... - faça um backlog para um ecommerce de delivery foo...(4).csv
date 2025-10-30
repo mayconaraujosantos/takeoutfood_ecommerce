@@ -1,0 +1,8 @@
+Prioridade,História de Usuário/Tarefa Técnica,Microsserviço Principal/Componente
+Alta,Configurar o Service-Discovery (ex: Eureka) para que os serviços se registrem e se localizem.,service-discovery
+Alta,Implementar o Config-Server centralizado para gerenciar configurações de todos os serviços.,config-server
+Alta,Criar o boilerplate inicial para todos os microsserviços com dependências e estrutura básica.,Todos os serviços
+Alta,Configurar o API-Gateway para rotear requisições externas para os serviços internos.,api-gateway
+Média,Configurar o pipeline de CI/CD (GitHub Actions/GitLab CI) inicial com testes unitários básicos e deploy no K8s.,"k8s, scripts, Makefile"
+Média,Implementar o sistema de Logs Centralizados (ex: ELK Stack) para monitoramento de erros e debug inicial.,"logs, docker-compose.observability.yml"
+Baixa,Adicionar estrutura inicial de documentação (Swagger/OpenAPI) em cada serviço e centralizar no docs.,docs

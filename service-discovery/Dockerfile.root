@@ -1,0 +1,70 @@
+# Multi-stage build for optimized Alpine image with Maven Wrapper
+FROM eclipse-temurin:21-jdk-alpine AS builder
+
+WORKDIR /app
+
+# Copy Maven Wrapper files
+COPY mvnw .
+COPY mvnw.cmd .
+COPY .mvn .mvn
+
+# Copy parent POM
+COPY pom.xml .
+
+# Copy all service directories (for multi-module build)
+COPY config-server config-server
+COPY service-discovery service-discovery
+COPY api-gateway api-gateway
+COPY auth-service auth-service
+COPY user-service user-service
+COPY restaurant-service restaurant-service
+COPY menu-service menu-service
+COPY order-service order-service
+COPY payment-service payment-service
+COPY delivery-service delivery-service
+COPY notification-service notification-service
+COPY review-service review-service
+
+# Make Maven Wrapper executable and build specific service
+RUN chmod +x ./mvnw && \
+    ./mvnw clean package -pl service-discovery -am -DskipTests
+
+# Runtime stage with minimal Alpine image
+FROM eclipse-temurin:21-jre-alpine
+
+LABEL maintainer="iFood Clone Team"
+LABEL service="service-discovery"
+LABEL version="1.0"
+
+# Install wget for healthcheck and create non-root user
+RUN apk add --no-cache wget && \
+    addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
+# Create app directory
+WORKDIR /app
+
+# Copy JAR from builder stage
+COPY --from=builder /app/service-discovery/target/*.jar app.jar
+
+# Change ownership to non-root user
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8761/actuator/health || exit 1
+
+EXPOSE 8761
+
+# Optimized JVM arguments for Alpine
+ENTRYPOINT ["java", \
+    "-XX:+UseContainerSupport", \
+    "-XX:MaxRAMPercentage=75.0", \
+    "-XX:+UseG1GC", \
+    "-XX:+UseStringDeduplication", \
+    "-Djava.security.egd=file:/dev/./urandom", \
+    "-jar", \
+    "app.jar"]

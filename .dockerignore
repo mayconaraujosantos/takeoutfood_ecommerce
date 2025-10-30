@@ -1,0 +1,80 @@
+# Ignorar arquivos desnecessários para otimizar o build das imagens Docker
+
+# Arquivos de documentação
+*.md
+README*
+docs/
+documentation/
+
+# Arquivos de IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+
+# Arquivos de OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Arquivos de controle de versão
+.git/
+.gitignore
+.gitattributes
+
+# Arquivos de build que não são necessários na imagem final
+target/classes/
+target/test-classes/
+target/generated-sources/
+target/generated-test-sources/
+target/maven-archiver/
+target/maven-status/
+target/surefire-reports/
+
+# Arquivos de log
+*.log
+logs/
+
+# Arquivos de teste
+src/test/
+**/test/
+
+# Arquivos temporários
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Arquivos de configuração local
+.env
+.env.local
+.env.*.local
+application-local.yml
+application-dev.yml
+
+# Dependências do Node.js (se houver front-end)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Arquivos de cache do Maven
+.mvn/wrapper/maven-wrapper.jar
+
+# Docker
+Dockerfile*
+docker-compose*
+*.dockerfile
+
+# Scripts
+*.sh
+!mvnw

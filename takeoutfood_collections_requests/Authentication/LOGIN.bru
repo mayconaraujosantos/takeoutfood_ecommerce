@@ -1,0 +1,27 @@
+meta {
+  name: LOGIN
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://localhost:8081/api/auth/login
+  body: json
+  auth: inherit
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "teste_logs2@ifood.com",
+    "password": "senha123456"
+  }
+}
+
+settings {
+  encodeUrl: false
+  timeout: 0
+}

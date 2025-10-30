@@ -9,21 +9,21 @@ spring:
     active: dev
 
   config:
-    import: "optional:configserver:http://localhost:8888"
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://config-server:8888}"
 
   cloud:
     config:
       enabled: true
-      uri: http://localhost:8888
+      uri: ${CONFIG_SERVER_URL:http://config-server:8888}"
       fail-fast: false
       retry:
         initial-interval: 1000
         max-attempts: 6
 
   datasource:
-    url: jdbc:postgresql://localhost:5433/auth_db
-    username: ifood_user
-    password: ifood_pass
+    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:ifood_db}
+    username: ${DB_USER:ifood_user}
+    password: ${DB_PASSWORD:ifood_pass}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -56,17 +56,24 @@ spring:
           starttls:
             enable: true
 
-  redis:
-    host: localhost
-    port: 6380
-    password: ifood_redis_pass
-    timeout: 2000ms
-    lettuce:
-      pool:
-        max-active: 8
-        max-wait: -1ms
-        max-idle: 8
-        min-idle: 0
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:ifood_redis_pass}
+      timeout: 2s
+      connect-timeout: 2s
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 0
+
+  cache:
+    type: caffeine
+    caffeine:
+      spec: initialCapacity=100,maximumSize=1000,expireAfterWrite=10m
 
 management:
   endpoints:
@@ -77,15 +84,25 @@ management:
     health:
       show-details: when_authorized
 
+  # OpenTelemetry Tracing Configuration
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0 # 100% sampling for development
+  otlp:
+    tracing:
+      endpoint: http://localhost:14268/api/traces
+
 logging:
   level:
     com.ifoodclone.auth: DEBUG
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer: ERROR
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId:-},%X{requestId:-}] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId:-},%X{requestId:-}] %logger{36} - %msg%n"
 
 app:
   jwt:
@@ -131,7 +148,7 @@ app:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_SERVER_URL:http://service-discovery:8761}/eureka/
     fetch-registry: true
     register-with-eureka: true
 
@@ -147,24 +164,25 @@ spring:
       on-profile: dev
 
   datasource:
-    url: jdbc:h2:mem:testdb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:ifood_db}
+    username: ${DB_USER:ifood_user}
+    password: ${DB_PASSWORD:ifood_pass}
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
     show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
 
 logging:
   level:
     com.ifoodclone.auth: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
 
 ---
 spring:
@@ -182,6 +200,9 @@ spring:
     hibernate:
       ddl-auto: create-drop
     show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
 
 logging:
   level:
@@ -209,10 +230,11 @@ spring:
     username: ${MAIL_USERNAME}
     password: ${MAIL_PASSWORD}
 
-  redis:
-    host: ${REDIS_HOST}
-    port: ${REDIS_PORT}
-    password: ${REDIS_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PASSWORD}
 
 app:
   jwt:

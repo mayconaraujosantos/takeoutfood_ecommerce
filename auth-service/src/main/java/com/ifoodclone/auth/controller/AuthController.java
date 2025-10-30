@@ -5,29 +5,44 @@ import java.security.Principal;
 import com.ifoodclone.auth.dto.AuthDto;
 import com.ifoodclone.auth.service.AuthService;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
-@Tag(name = "Authentication", description = "APIs de Autenticação e Autorização")
+@Tag(name = "Authentication Service", description = "Authentication and Authorization APIs v1")
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/api/v1/auth")
+@Validated
 public class AuthController {
 
-    private final AuthService authService;
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+    private static final String SERVICE_NAME = "auth-service";
+    private static final String SERVICE_VERSION = "1.0.0";
+    private final Tracer tracer;
 
-    public AuthController(AuthService authService) {
+    private AuthService authService;
+
+    public AuthController(OpenTelemetry openTelemetry, AuthService authService) {
+        this.tracer = openTelemetry.getTracer(SERVICE_NAME, SERVICE_VERSION);
         this.authService = authService;
     }
 
@@ -39,17 +54,60 @@ public class AuthController {
             @Valid @RequestBody AuthDto.LoginRequest request,
             HttpServletRequest httpRequest) {
 
-        // Adicionar informações do device e IP
-        request.setDeviceInfo(extractDeviceInfo(httpRequest));
-        request.setIpAddress(extractIpAddress(httpRequest));
+        Span span = tracer.spanBuilder("auth.login")
+                .setAttribute("service.name", SERVICE_NAME)
+                .setAttribute("operation", "user.login")
+                .setAttribute("user.email", request.getEmail())
+                .startSpan();
 
-        try {
-            AuthDto.LoginResponse response = authService.login(request);
-            return ResponseEntity.ok(
-                    AuthDto.ApiResponse.success("Login realizado com sucesso", response));
-        } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(AuthDto.ApiResponse.error("Falha no login", ex.getMessage()));
+        try (Scope scope = span.makeCurrent()) {
+            // Adicionar informações do device e IP
+            request.setDeviceInfo(extractDeviceInfo(httpRequest));
+            request.setIpAddress(extractIpAddress(httpRequest));
+
+            // Log de tentativa de login
+            String userAgent = httpRequest.getHeader("User-Agent");
+            span.addEvent("login.started")
+                    .setAttribute("client.ip", request.getIpAddress())
+                    .setAttribute("client.user_agent", userAgent != null ? userAgent : "unknown");
+
+            logger.info("Tentativa de login - Email: {}, IP: {}, UserAgent: {}",
+                    request.getEmail(), request.getIpAddress(),
+                    userAgent != null ? userAgent : "unknown");
+
+            try {
+                span.addEvent("auth.validation.started");
+                AuthDto.LoginResponse response = authService.login(request);
+
+                // Log de login bem-sucedido
+                span.addEvent("login.completed")
+                        .setAttribute("result.status", "success")
+                        .setAttribute("user.role", response.getUser().getRole().toString());
+                span.setStatus(StatusCode.OK);
+
+                logger.info("Login realizado com sucesso - Email: {}, Role: {}, IP: {}",
+                        request.getEmail(), response.getUser().getRole(), request.getIpAddress());
+
+                return ResponseEntity.ok(
+                        AuthDto.ApiResponse.success("Login realizado com sucesso", response));
+
+            } catch (Exception ex) {
+                // Instrumentação de erro
+                span.recordException(ex)
+                        .setStatus(StatusCode.ERROR, "Login failed: " + ex.getMessage())
+                        .addEvent("login.failed")
+                        .setAttribute("error.type", ex.getClass().getSimpleName())
+                        .setAttribute("error.message", ex.getMessage());
+
+                // Log de falha no login
+                logger.warn("Falha no login - Email: {}, Erro: {}, IP: {}",
+                        request.getEmail(), ex.getMessage(), request.getIpAddress());
+
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(AuthDto.ApiResponse.error("Falha no login", ex.getMessage()));
+            }
+        } finally {
+            span.end();
         }
     }
 
@@ -58,15 +116,61 @@ public class AuthController {
      */
     @PostMapping("/register")
     public ResponseEntity<AuthDto.ApiResponse<AuthDto.UserInfo>> register(
-            @Valid @RequestBody AuthDto.RegisterRequest request) {
+            @Valid @RequestBody AuthDto.RegisterRequest request,
+            HttpServletRequest httpRequest) {
 
-        try {
-            AuthDto.UserInfo userInfo = authService.register(request);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(AuthDto.ApiResponse.success("Usuário registrado com sucesso", userInfo));
-        } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(AuthDto.ApiResponse.error("Falha no registro", ex.getMessage()));
+        Span span = tracer.spanBuilder("auth.register")
+                .setAttribute("service.name", SERVICE_NAME)
+                .setAttribute("operation", "user.register")
+                .setAttribute("user.email", request.getEmail())
+                .setAttribute("user.role", request.getRole().toString())
+                .startSpan();
+
+        try (Scope scope = span.makeCurrent()) {
+            String ipAddress = extractIpAddress(httpRequest);
+
+            // Log de início da requisição
+            span.addEvent("registration.started");
+            logger.info("Iniciando registro de usuário - Email: {}, Role: {}, IP: {}",
+                    request.getEmail(), request.getRole(), ipAddress);
+
+            try {
+                // Validação adicional para log
+                logger.debug("Validando dados do usuário: email={}, firstName={}, role={}",
+                        request.getEmail(), request.getFirstName(), request.getRole());
+
+                span.addEvent("user.validation.completed");
+                AuthDto.UserInfo userInfo = authService.register(request);
+
+                // Log de sucesso
+                span.addEvent("registration.completed")
+                        .setAttribute("result.status", "success")
+                        .setAttribute("user.id", userInfo.getId());
+                span.setStatus(StatusCode.OK);
+
+                logger.info("Usuário registrado com sucesso - ID: {}, Email: {}, Role: {}, IP: {}",
+                        userInfo.getId(), userInfo.getEmail(), userInfo.getRole(), ipAddress);
+
+                return ResponseEntity.status(HttpStatus.CREATED)
+                        .body(AuthDto.ApiResponse.success("Usuário registrado com sucesso", userInfo));
+
+            } catch (Exception ex) {
+                // Instrumentação de erro
+                span.recordException(ex)
+                        .setStatus(StatusCode.ERROR, "Registration failed: " + ex.getMessage())
+                        .addEvent("registration.failed")
+                        .setAttribute("error.type", ex.getClass().getSimpleName())
+                        .setAttribute("error.message", ex.getMessage());
+
+                // Log de erro
+                logger.error("Falha no registro de usuário - Email: {}, Erro: {}, IP: {}",
+                        request.getEmail(), ex.getMessage(), ipAddress, ex);
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(AuthDto.ApiResponse.error("Falha no registro", ex.getMessage()));
+            }
+        } finally {
+            span.end();
         }
     }
 
@@ -198,6 +302,24 @@ public class AuthController {
         } catch (Exception ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(AuthDto.ApiResponse.error("Falha na verificação de email", ex.getMessage()));
+        }
+    }
+
+    /**
+     * Get current user profile
+     */
+    @GetMapping("/profile")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<AuthDto.ApiResponse<AuthDto.UserInfo>> getCurrentProfile() {
+        try {
+            Long userId = getCurrentUserId();
+            AuthDto.UserInfo userInfo = authService.getUserById(userId);
+
+            return ResponseEntity.ok(
+                    AuthDto.ApiResponse.success("Perfil do usuário recuperado com sucesso", userInfo));
+        } catch (Exception ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(AuthDto.ApiResponse.error("Falha ao recuperar perfil", ex.getMessage()));
         }
     }
 
