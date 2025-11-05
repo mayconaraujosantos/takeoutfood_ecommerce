@@ -1,0 +1,221 @@
+<!-- Logback configuration for structured JSON logging with Loki integration -->
+<configuration>
+  <springProfile name="dev,test">
+    <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
+
+    <!-- File appender for structured JSON logs -->
+    <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+      <file>/app/logs/auth-service.json</file>
+      <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+        <fileNamePattern>/app/logs/auth-service.%d{yyyy-MM-dd}.%i.json</fileNamePattern>
+        <maxFileSize>100MB</maxFileSize>
+        <maxHistory>30</maxHistory>
+        <totalSizeCap>1GB</totalSizeCap>
+      </rollingPolicy>
+
+      <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+        <providers>
+          <timestamp>
+            <timeZone>America/Sao_Paulo</timeZone>
+          </timestamp>
+          <version />
+          <logLevel />
+          <message />
+          <mdc />
+          <arguments />
+          <stackTrace />
+
+          <!-- Custom fields -->
+          <pattern>
+            <pattern>
+              {
+              "service": "auth-service",
+              "environment": "${SPRING_PROFILES_ACTIVE:-local}",
+              "thread": "%thread",
+              "logger": "%logger{36}",
+              "traceId": "%X{traceId:-}",
+              "spanId": "%X{spanId:-}"
+              }
+            </pattern>
+          </pattern>
+        </providers>
+      </encoder>
+    </appender>
+
+    <!-- Console appender with human-readable format for development -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder>
+        <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+      </encoder>
+    </appender>
+
+    <!-- Loki appender for direct log shipping (only when observability is enabled) -->
+    <springProfile name="docker,prod">
+      <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+        <http>
+          <url>http://loki:3100/loki/api/v1/push</url>
+        </http>
+        <format>
+          <label>
+            <pattern>
+              service=auth-service,env=${SPRING_PROFILES_ACTIVE:-local},level=%level</pattern>
+          </label>
+          <message>
+            <pattern>
+              {
+              "timestamp": "%d{yyyy-MM-dd HH:mm:ss.SSS}",
+              "level": "%level",
+              "thread": "%thread",
+              "logger": "%logger{36}",
+              "message": "%message",
+              "traceId": "%X{traceId:-}",
+              "spanId": "%X{spanId:-}"
+              }
+            </pattern>
+          </message>
+        </format>
+      </appender>
+
+      <!-- Async Loki appender -->
+      <appender name="ASYNC_LOKI" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="LOKI" />
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+      </appender>
+    </springProfile>
+
+    <!-- Async appenders for better performance -->
+    <appender name="ASYNC_JSON_FILE" class="ch.qos.logback.classic.AsyncAppender">
+      <appender-ref ref="JSON_FILE" />
+      <queueSize>512</queueSize>
+      <discardingThreshold>0</discardingThreshold>
+      <includeCallerData>true</includeCallerData>
+    </appender>
+  </springProfile>
+
+  <!-- Docker profile - console only -->
+  <springProfile name="docker">
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder>
+        <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+      </encoder>
+    </appender>
+
+    <!-- Root logger for docker -->
+    <root level="INFO">
+      <appender-ref ref="CONSOLE" />
+    </root>
+  </springProfile>
+
+  <!-- Production profile - only JSON and Loki -->
+  <springProfile name="prod">
+    <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+      <file>/app/logs/auth-service.json</file>
+      <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+        <fileNamePattern>/app/logs/auth-service.%d{yyyy-MM-dd}.%i.json</fileNamePattern>
+        <maxFileSize>500MB</maxFileSize>
+        <maxHistory>60</maxHistory>
+        <totalSizeCap>10GB</totalSizeCap>
+      </rollingPolicy>
+
+      <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+        <providers>
+          <timestamp />
+          <version />
+          <logLevel />
+          <message />
+          <mdc />
+          <stackTrace />
+          <pattern>
+            <pattern>
+              {
+              "service": "auth-service",
+              "environment": "production",
+              "thread": "%thread",
+              "logger": "%logger{36}",
+              "traceId": "%X{traceId:-}",
+              "spanId": "%X{spanId:-}"
+              }
+            </pattern>
+          </pattern>
+        </providers>
+      </encoder>
+    </appender>
+
+    <appender name="ASYNC_JSON_FILE" class="ch.qos.logback.classic.AsyncAppender">
+      <appender-ref ref="JSON_FILE" />
+      <queueSize>1024</queueSize>
+      <discardingThreshold>0</discardingThreshold>
+    </appender>
+  </springProfile>
+
+  <!-- Logger configurations -->
+  <springProfile name="dev,test">
+    <logger name="com.ifoodclone.auth" level="DEBUG" additivity="false">
+      <appender-ref ref="CONSOLE" />
+      <appender-ref ref="ASYNC_JSON_FILE" />
+    </logger>
+
+    <!-- Security and authentication specific logging -->
+    <logger name="org.springframework.security" level="DEBUG" additivity="false">
+      <appender-ref ref="CONSOLE" />
+      <appender-ref ref="ASYNC_JSON_FILE" />
+    </logger>
+
+    <!-- JWT related logging -->
+    <logger name="io.jsonwebtoken" level="INFO" additivity="false">
+      <appender-ref ref="CONSOLE" />
+      <appender-ref ref="ASYNC_JSON_FILE" />
+    </logger>
+
+    <!-- Redis operations -->
+    <logger name="org.springframework.data.redis" level="DEBUG" additivity="false">
+      <appender-ref ref="CONSOLE" />
+      <appender-ref ref="ASYNC_JSON_FILE" />
+    </logger>
+
+    <!-- Root logger -->
+    <root level="INFO">
+      <appender-ref ref="CONSOLE" />
+      <appender-ref ref="ASYNC_JSON_FILE" />
+    </root>
+  </springProfile>
+
+  <!-- Production and Docker profiles with Loki -->
+  <springProfile name="docker,prod">
+    <logger name="com.ifoodclone.auth" level="INFO" additivity="false">
+      <appender-ref ref="CONSOLE" />
+      <appender-ref ref="ASYNC_JSON_FILE" />
+      <appender-ref ref="ASYNC_LOKI" />
+    </logger>
+
+    <!-- Security and authentication specific logging -->
+    <logger name="org.springframework.security" level="DEBUG" additivity="false">
+      <appender-ref ref="CONSOLE" />
+      <appender-ref ref="ASYNC_JSON_FILE" />
+      <appender-ref ref="ASYNC_LOKI" />
+    </logger>
+
+    <!-- JWT related logging -->
+    <logger name="io.jsonwebtoken" level="INFO" additivity="false">
+      <appender-ref ref="CONSOLE" />
+      <appender-ref ref="ASYNC_JSON_FILE" />
+      <appender-ref ref="ASYNC_LOKI" />
+    </logger>
+
+    <!-- Redis operations -->
+    <logger name="org.springframework.data.redis" level="DEBUG" additivity="false">
+      <appender-ref ref="CONSOLE" />
+      <appender-ref ref="ASYNC_JSON_FILE" />
+      <appender-ref ref="ASYNC_LOKI" />
+    </logger>
+
+    <!-- Root logger -->
+    <root level="INFO">
+      <appender-ref ref="CONSOLE" />
+      <appender-ref ref="ASYNC_JSON_FILE" />
+      <appender-ref ref="ASYNC_LOKI" />
+    </root>
+  </springProfile>
+</configuration>

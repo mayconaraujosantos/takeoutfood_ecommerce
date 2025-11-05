@@ -131,10 +131,18 @@ services:
     depends_on:
       - service-discovery
       - config-server
+      - redis
     environment:
       SPRING_PROFILES_ACTIVE: prod
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_SERVER_URL: http://service-discovery:8761
+      # Redis Configuration - Professional Setup
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      # JWT Configuration
+      JWT_SECRET: mySecretKey123456789012345678901234567890123456789012345678901234567890
     labels:
       - "logging=promtail"
     volumes:

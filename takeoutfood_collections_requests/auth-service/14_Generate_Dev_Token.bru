@@ -1,0 +1,35 @@
+meta {
+  name: Generate Dev Token
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/api/dev/token?username=dev-user&role=ADMIN&validityDays=30
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+script:post-response {
+  if (res.status === 200) {
+    bru.setVar("accessToken", res.body.token);
+    console.log("Dev token generated and saved:", res.body.token);
+  }
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Should return dev token", function() {
+    expect(res.getBody()).to.have.property('token');
+    expect(res.getBody()).to.have.property('type', 'Bearer');
+    expect(res.getBody()).to.have.property('username', 'dev-user');
+    expect(res.getBody()).to.have.property('role', 'ADMIN');
+  });
+}

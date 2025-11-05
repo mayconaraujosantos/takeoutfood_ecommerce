@@ -8,18 +8,13 @@ spring:
   application:
     name: api-gateway
 
-  # Redis configuration for rate limiting
+  # Redis configuration - Simplified for reliability
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6380}
-      password: ${REDIS_PASSWORD:}
-      timeout: 2s
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 2
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      database: 0
+      timeout: 5000ms
 
   cloud:
     gateway:
@@ -167,15 +162,17 @@ spring:
           filters:
             - AddResponseHeader=X-Route-Type, health
 
-      # Default filters applied to all routes
+      # Default filters applied to all routes (Professional Setup)
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
         - AddResponseHeader=X-Gateway-Version, 1.0.0
+        - AddResponseHeader=X-Response-Time, #{T(System).currentTimeMillis()}
         - name: RequestRateLimiter
           args:
-            redis-rate-limiter.replenishRate: 10
-            redis-rate-limiter.burstCapacity: 20
+            redis-rate-limiter.replenishRate: 20
+            redis-rate-limiter.burstCapacity: 40
             redis-rate-limiter.requestedTokens: 1
+            key-resolver: "#{@ipKeyResolver}"
 
       # Global CORS configuration
       globalcors:
@@ -280,7 +277,19 @@ management:
   endpoint:
     health:
       show-details: always
+      show-components: always
     gateway:
+      enabled: true
+  health:
+    redis:
+      enabled: true
+    defaults:
+      enabled: false
+    diskspace:
+      enabled: true
+    ping:
+      enabled: true
+    defaults:
       enabled: true
   metrics:
     export:

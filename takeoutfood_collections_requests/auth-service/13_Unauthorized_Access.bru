@@ -1,0 +1,29 @@
+meta {
+  name: Unauthorized Access
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{baseUrl}}/api/v1/auth/profile
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: invalid_token
+}
+
+headers {
+  Content-Type: application/json
+}
+
+tests {
+  test("Status should be 401 or 403", function() {
+    expect([401, 403]).to.include(res.getStatus());
+  });
+
+  test("Should return error for invalid token", function() {
+    expect(res.getBody()).to.have.property('success', false);
+  });
+}

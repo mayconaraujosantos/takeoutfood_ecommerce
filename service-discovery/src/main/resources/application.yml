@@ -8,18 +8,23 @@ spring:
   cloud:
     config:
       enabled: false
+      fail-fast: false
 
   profiles:
     active: standalone
+
+  config:
+    import: "optional:configserver:"
 
 eureka:
   instance:
     hostname: localhost
     prefer-ip-address: false
+    instance-id: ${spring.application.name}:${server.port}
 
   client:
-    register-with-eureka: false
-    fetch-registry: false
+    register-with-eureka: true
+    fetch-registry: true
     service-url:
       defaultZone: http://localhost:8761/eureka/
 
@@ -37,10 +42,14 @@ management:
     health:
       show-details: always
 
+  health:
+    show-details: always
+    show-components: always
+
 logging:
   level:
-    com.netflix.eureka: DEBUG
-    com.netflix.discovery: DEBUG
+    '[com.netflix.eureka]': DEBUG
+    '[com.netflix.discovery]': DEBUG
     root: INFO
   pattern:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
@@ -57,5 +66,5 @@ eureka:
 
 logging:
   level:
-    com.netflix.eureka: INFO
-    com.netflix.discovery: INFO
+    '[com.netflix.eureka]': INFO
+    '[com.netflix.discovery]': INFO

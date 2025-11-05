@@ -1,0 +1,46 @@
+meta {
+  name: Generate Team Tokens
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{baseUrl}}/api/dev/token/teams
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+script:post-response {
+  if (res.status === 200) {
+    // Salvar token do QA como exemplo
+    if (res.body.qa && res.body.qa.token) {
+      bru.setVar("qaToken", res.body.qa.token);
+      console.log("Team tokens generated. QA token saved.");
+    }
+  }
+}
+
+tests {
+  test("Status should be 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Should return team tokens", function() {
+    expect(res.getBody()).to.have.property('frontend');
+    expect(res.getBody()).to.have.property('mobile');
+    expect(res.getBody()).to.have.property('qa');
+    expect(res.getBody()).to.have.property('backend');
+  });
+
+  test("Each team should have valid token structure", function() {
+    const teams = ['frontend', 'mobile', 'qa', 'backend'];
+    teams.forEach(team => {
+      expect(res.getBody()[team]).to.have.property('token');
+      expect(res.getBody()[team]).to.have.property('type', 'Bearer');
+    });
+  });
+}

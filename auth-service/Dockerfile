@@ -8,6 +8,10 @@ WORKDIR /app
 RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup
 
+# Create logs directory with proper permissions
+RUN mkdir -p /app/logs && \
+    chown -R appuser:appgroup /app/logs
+
 # Copy JAR from local build (build JAR first with: ./mvnw clean package -DskipTests -pl auth-service)
 COPY auth-service/target/*.jar app.jar
 
