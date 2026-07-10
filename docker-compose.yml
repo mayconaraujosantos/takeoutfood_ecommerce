@@ -27,13 +27,14 @@ services:
   postgres:
     image: postgres:15
     environment:
-      POSTGRES_DB: ifood_db
+      POSTGRES_DB: postgres
       POSTGRES_USER: ifood_user
       POSTGRES_PASSWORD: ifood_pass
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-postgres.sh:/docker-entrypoint-initdb.d/01-init-postgres.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ifood_user"]
       interval: 10s
@@ -169,10 +170,10 @@ services:
       SPRING_PROFILES_ACTIVE: dev
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_SERVER_URL: http://service-discovery:8761
-      DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+      DATABASE_URL: jdbc:postgresql://postgres:5432/auth_db
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: ifood_db
+      DB_NAME: auth_db
       DB_USER: ifood_user
       DB_PASSWORD: ifood_pass
       REDIS_HOST: redis
@@ -208,7 +209,9 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_SERVER_URL: http://service-discovery:8761
-      DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+      DATABASE_URL: jdbc:postgresql://postgres:5432/user_db
+      DB_USERNAME: ifood_user
+      DB_PASSWORD: ifood_pass
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     labels:
       - "logging=promtail"
@@ -236,7 +239,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_SERVER_URL: http://service-discovery:8761
-      DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+      DATABASE_URL: jdbc:postgresql://postgres:5432/restaurant_db
       DB_USERNAME: ifood_user
       DB_PASSWORD: ifood_pass
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
@@ -262,7 +265,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_SERVER_URL: http://service-discovery:8761
-      DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+      DATABASE_URL: jdbc:postgresql://postgres:5432/menu_db
       DB_USERNAME: ifood_user
       DB_PASSWORD: ifood_pass
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
@@ -288,7 +291,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_SERVER_URL: http://service-discovery:8761
-      DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+      DATABASE_URL: jdbc:postgresql://postgres:5432/order_db
       DB_USERNAME: ifood_user
       DB_PASSWORD: ifood_pass
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
@@ -314,7 +317,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_SERVER_URL: http://service-discovery:8761
-      DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+      DATABASE_URL: jdbc:postgresql://postgres:5432/payment_db
       DB_USERNAME: ifood_user
       DB_PASSWORD: ifood_pass
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
@@ -368,7 +371,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_SERVER_URL: http://service-discovery:8761
-      DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+      DATABASE_URL: jdbc:postgresql://postgres:5432/delivery_db
       DB_USERNAME: ifood_user
       DB_PASSWORD: ifood_pass
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092

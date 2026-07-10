@@ -21,7 +21,7 @@ spring:
         max-attempts: 6
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:ifood_db}
+    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:auth_db}
     username: ${DB_USER:ifood_user}
     password: ${DB_PASSWORD:ifood_pass}
     driver-class-name: org.postgresql.Driver
@@ -164,7 +164,7 @@ spring:
       on-profile: dev
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:ifood_db}
+    url: jdbc:postgresql://${DB_HOST:postgres}:${DB_PORT:5432}/${DB_NAME:auth_db}
     username: ${DB_USER:ifood_user}
     password: ${DB_PASSWORD:ifood_pass}
     driver-class-name: org.postgresql.Driver

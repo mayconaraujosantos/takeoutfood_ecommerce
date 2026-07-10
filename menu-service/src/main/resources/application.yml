@@ -17,7 +17,7 @@ spring:
         max-attempts: 6
         max-interval: 10000
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://postgres:5432/ifood_db}
+    url: ${DATABASE_URL:jdbc:postgresql://postgres:5432/menu_db}
     username: ${DB_USERNAME:ifood_user}
     password: ${DB_PASSWORD:ifood_pass}
     driver-class-name: org.postgresql.Driver
