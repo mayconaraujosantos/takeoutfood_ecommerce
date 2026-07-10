@@ -374,13 +374,17 @@ Este repositório agora possui automações de mercado com foco em qualidade e e
 
 - **CI Quality**: build multi-módulo, testes, upload de relatórios e análise Sonar com Quality Gate.
 - **Integration Test Auth Service**: testes de integração com Testcontainers (PostgreSQL + Redis) no `auth-service`.
+- **Integration Test User Service**: smoke test de integração com Testcontainers (PostgreSQL) no `user-service`.
+- **Integration Test Order Service**: smoke test de integração com Testcontainers (PostgreSQL) no `order-service`.
 - **CD Docker Images**: build e push de imagens Docker para GHCR no branch `main` (e tags `v*`).
 - **Dependabot**: atualização semanal de dependências Maven e GitHub Actions.
+- **Integration Nightly**: execução noturna dos testes de integração de serviços críticos.
 
 ### Workflows
 
 - `.github/workflows/ci-quality.yml`
 - `.github/workflows/cd-images.yml`
+- `.github/workflows/integration-nightly.yml`
 - `.github/dependabot.yml`
 
 ### Segredos Necessários (Repository Secrets)
