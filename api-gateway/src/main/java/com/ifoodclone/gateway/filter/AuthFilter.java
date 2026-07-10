@@ -1,6 +1,9 @@
 package com.ifoodclone.gateway.filter;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import javax.crypto.SecretKey;
 
@@ -101,9 +104,21 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
             }
 
             Claims claims = getClaims(token);
+            if (claims.getExpiration() == null) {
+                return onError(exchange, "Invalid token", HttpStatus.UNAUTHORIZED);
+            }
+
+            String userRole = resolveRole(claims);
+            String authorities = claims.get("authorities", String.class);
+            String userEmail = claims.get("email", String.class);
+
             ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
                     .header("X-User-Id", claims.getSubject())
-                    .header("X-User-Role", claims.get("role", String.class))
+                    .header("X-User-Email", userEmail != null ? userEmail : "")
+                    .header("X-User-Role", userRole)
+                    .header("X-User-Roles", userRole)
+                    .header("X-User-Authorities", authorities != null ? authorities : "")
+                    .header("X-Authenticated", "true")
                     .build();
 
             return chain.filter(exchange.mutate().request(modifiedRequest).build());
@@ -115,33 +130,79 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
     }
 
     private boolean isValidToken(String token) {
-        try {
-            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
-            Jwts.parser()
-                    .verifyWith(key)
-                    .build()
-                    .parseSignedClaims(token);
-            return true;
-        } catch (Exception e) {
-            log.debug("Token validation failed: {}", e.getMessage());
-            return false;
+        for (SecretKey key : resolveSigningKeys()) {
+            try {
+                Jwts.parser()
+                        .verifyWith(key)
+                        .build()
+                        .parseSignedClaims(token);
+                return true;
+            } catch (Exception e) {
+                // Try next candidate key.
+            }
         }
+
+        log.debug("Token validation failed for all candidate signing keys");
+        return false;
     }
 
     private Claims getClaims(String token) {
-        byte[] keyBytes;
-        try {
-            keyBytes = Decoders.BASE64.decode(jwtSecret);
-        } catch (Exception ex) {
-            keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+        Exception lastException = null;
+
+        for (SecretKey key : resolveSigningKeys()) {
+            try {
+                return Jwts.parser()
+                        .verifyWith(key)
+                        .build()
+                        .parseSignedClaims(token)
+                        .getPayload();
+            } catch (Exception ex) {
+                lastException = ex;
+            }
         }
 
-        SecretKey key = Keys.hmacShaKeyFor(keyBytes);
-        return Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        if (lastException instanceof RuntimeException runtimeException) {
+            throw runtimeException;
+        }
+
+        throw new RuntimeException("Failed to extract JWT claims");
+    }
+
+    private List<SecretKey> resolveSigningKeys() {
+        List<SecretKey> keys = new ArrayList<>();
+        byte[] rawBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+
+        try {
+            byte[] decodedBytes = Decoders.BASE64.decode(jwtSecret);
+            if (decodedBytes.length >= 32) {
+                keys.add(Keys.hmacShaKeyFor(decodedBytes));
+            }
+        } catch (Exception ex) {
+            // Secret is not Base64 encoded, raw key fallback will be used.
+        }
+
+        if (rawBytes.length >= 32) {
+            boolean rawAlreadyAdded = keys.stream().anyMatch(k -> Arrays.equals(k.getEncoded(), rawBytes));
+            if (!rawAlreadyAdded) {
+                keys.add(Keys.hmacShaKeyFor(rawBytes));
+            }
+        }
+
+        if (keys.isEmpty()) {
+            throw new IllegalStateException("JWT secret must be at least 32 bytes (raw or decoded)");
+        }
+
+        return keys;
+    }
+
+    private String resolveRole(Claims claims) {
+        String role = claims.get("role", String.class);
+        if (role != null && !role.isBlank()) {
+            return role;
+        }
+
+        String roles = claims.get("roles", String.class);
+        return roles != null ? roles : "";
     }
 
     private Mono<Void> onError(ServerWebExchange exchange, String message, HttpStatus status) {
