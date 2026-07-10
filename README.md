@@ -366,7 +366,31 @@ config-server/src/main/resources/config/
 - [ ] **Machine Learning** para recomendações
 - [ ] **Mobile App** React Native
 - [ ] **Kubernetes Deployment** completo
-- [ ] **CI/CD Pipeline** com GitHub Actions
+- [x] **CI/CD Pipeline** com GitHub Actions
+
+## 🔄 CI/CD (GitHub Actions)
+
+Este repositório agora possui automações de mercado com foco em qualidade e entrega contínua:
+
+- **CI Quality**: build multi-módulo, testes, upload de relatórios e análise Sonar com Quality Gate.
+- **CD Docker Images**: build e push de imagens Docker para GHCR no branch `main` (e tags `v*`).
+- **Dependabot**: atualização semanal de dependências Maven e GitHub Actions.
+
+### Workflows
+
+- `.github/workflows/ci-quality.yml`
+- `.github/workflows/cd-images.yml`
+- `.github/dependabot.yml`
+
+### Segredos Necessários (Repository Secrets)
+
+Para habilitar Sonar no CI:
+
+- `SONAR_TOKEN`
+- `SONAR_HOST_URL`
+- `SONAR_PROJECT_KEY`
+
+Sem esses segredos, o job de Sonar é ignorado automaticamente, mas build e testes continuam executando normalmente.
 
 ---
 
