@@ -397,6 +397,25 @@ Para habilitar Sonar no CI:
 
 Sem esses segredos, o job de Sonar é ignorado automaticamente, mas build e testes continuam executando normalmente.
 
+### Podman (Ambiente Local)
+
+Se voce usa Podman e enfrenta instabilidade nos testes com Testcontainers, use o helper do projeto:
+
+```bash
+make test-it-auth-podman
+make test-it-user-podman
+make test-it-order-podman
+make test-it-all-podman
+```
+
+Guia detalhado:
+
+- `docs/TESTCONTAINERS_PODMAN.md`
+
+Script utilitario:
+
+- `scripts/run-tests-podman.sh`
+
 ---
 
 ## 📞 Contato

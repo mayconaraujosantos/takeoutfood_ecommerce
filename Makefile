@@ -79,6 +79,34 @@ help: ## Show this help message
 	@echo "  $(YELLOW)make docker-status-all$(NC)        # Show all container status"
 	@echo "  $(YELLOW)make docker-start-core$(NC)        # Start Config + Discovery + Gateway"
 	@echo "  $(YELLOW)make docker-stop-all$(NC)          # Stop all service containers"
+	@echo ""
+	@echo "$(GREEN)🧪 Podman Testcontainers:$(NC)"
+	@echo "  $(YELLOW)make test-it-auth-podman$(NC)      # Auth-service integration tests with Podman"
+	@echo "  $(YELLOW)make test-it-user-podman$(NC)      # User-service integration tests with Podman"
+	@echo "  $(YELLOW)make test-it-order-podman$(NC)     # Order-service integration tests with Podman"
+	@echo "  $(YELLOW)make test-it-all-podman$(NC)       # All integration tests with Podman"
+
+# ==========================================
+# Testcontainers with Podman (local)
+# ==========================================
+
+.PHONY: test-it-auth-podman
+test-it-auth-podman: ## Run auth-service integration tests using Podman socket
+	@bash scripts/run-tests-podman.sh ./mvnw -B -ntp -pl auth-service -am failsafe:integration-test failsafe:verify
+
+.PHONY: test-it-user-podman
+test-it-user-podman: ## Run user-service integration tests using Podman socket
+	@bash scripts/run-tests-podman.sh ./mvnw -B -ntp -pl user-service -am failsafe:integration-test failsafe:verify
+
+.PHONY: test-it-order-podman
+test-it-order-podman: ## Run order-service integration tests using Podman socket
+	@bash scripts/run-tests-podman.sh ./mvnw -B -ntp -pl order-service -am failsafe:integration-test failsafe:verify
+
+.PHONY: test-it-all-podman
+test-it-all-podman: ## Run integration tests for auth, user and order using Podman socket
+	@bash scripts/run-tests-podman.sh ./mvnw -B -ntp \
+		-pl auth-service,user-service,order-service -am \
+		failsafe:integration-test failsafe:verify
 
 # ==========================================
 # Infrastructure Management (docker-compose.infrastructure.yml)
