@@ -373,6 +373,7 @@ config-server/src/main/resources/config/
 Este repositório agora possui automações de mercado com foco em qualidade e entrega contínua:
 
 - **CI Quality**: build multi-módulo, testes, upload de relatórios e análise Sonar com Quality Gate.
+- **Integration Test Auth Service**: testes de integração com Testcontainers (PostgreSQL + Redis) no `auth-service`.
 - **CD Docker Images**: build e push de imagens Docker para GHCR no branch `main` (e tags `v*`).
 - **Dependabot**: atualização semanal de dependências Maven e GitHub Actions.
 
