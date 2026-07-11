@@ -71,6 +71,7 @@ public class SecurityConfig {
 
                         // Health check endpoints
                         .requestMatchers("/actuator/health", "/actuator/info", "/actuator/metrics").permitAll()
+                        .requestMatchers("/api/v1/auth/health").permitAll()
 
                         // Tracing test endpoints
                         .requestMatchers("/api/test/**", "/api/tracing/**").permitAll()
