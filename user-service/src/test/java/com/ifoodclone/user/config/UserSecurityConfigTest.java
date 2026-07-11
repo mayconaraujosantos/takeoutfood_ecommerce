@@ -115,9 +115,10 @@ class UserSecurityConfigTest {
             // Then
             verify(filterChain).doFilter(request, response);
             assertThat(response.getStatus()).isEqualTo(200);
-            assertThat(UserContext.getUserId()).isEqualTo(123L);
-            assertThat(UserContext.getUserEmail()).isEqualTo("test@example.com");
-            assertThat(UserContext.getUserRoles()).isEqualTo("CUSTOMER");
+            // Context is expected to be cleared in filter finally block.
+            assertThat(UserContext.getUserId()).isNull();
+            assertThat(UserContext.getUserEmail()).isNull();
+            assertThat(UserContext.getUserRoles()).isNull();
         }
 
         @Test

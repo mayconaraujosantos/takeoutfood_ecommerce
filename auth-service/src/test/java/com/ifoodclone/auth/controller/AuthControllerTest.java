@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -24,9 +25,15 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+
+import com.ifoodclone.auth.config.JwtAuthenticationEntryPoint;
+import com.ifoodclone.auth.config.JwtAuthenticationFilter;
 
 @WebMvcTest(controllers = AuthController.class)
 @ActiveProfiles("test")
@@ -42,6 +49,18 @@ class AuthControllerTest {
 
     @MockBean
     private AuthService authService;
+
+        @MockBean
+        private UserDetailsService userDetailsService;
+
+        @MockBean
+        private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+
+        @MockBean
+        private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+        @MockBean
+        private AuthenticationManager authenticationManager;
 
     private AuthDto.LoginResponse loginResponse;
     private AuthDto.UserInfo userInfo;
@@ -245,13 +264,13 @@ class AuthControllerTest {
 
         @Test
         @DisplayName("Should get user profile successfully")
-        @WithMockUser(username = "test@example.com", roles = "CUSTOMER")
         void shouldGetUserProfileSuccessfully() throws Exception {
             // Given
             when(authService.getUserById(anyLong())).thenReturn(userInfo);
 
             // When & Then
             mockMvc.perform(get("/api/v1/auth/profile")
+                                        .with(authentication(buildUserAuthentication()))
                     .header("Authorization", "Bearer valid-token"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
@@ -260,7 +279,6 @@ class AuthControllerTest {
 
         @Test
         @DisplayName("Should return error when user not found")
-        @WithMockUser(username = "test@example.com", roles = "CUSTOMER")
         void shouldReturnErrorWhenUserNotFound() throws Exception {
             // Given
             when(authService.getUserById(anyLong()))
@@ -268,6 +286,7 @@ class AuthControllerTest {
 
             // When & Then
             mockMvc.perform(get("/api/v1/auth/profile")
+                    .with(authentication(buildUserAuthentication()))
                     .header("Authorization", "Bearer valid-token"))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.success").value(false))
@@ -281,7 +300,6 @@ class AuthControllerTest {
 
         @Test
         @DisplayName("Should logout successfully")
-        @WithMockUser(username = "test@example.com", roles = "CUSTOMER")
         void shouldLogoutSuccessfully() throws Exception {
             // Given
             AuthDto.RefreshTokenRequest request = AuthDto.RefreshTokenRequest.builder()
@@ -290,6 +308,7 @@ class AuthControllerTest {
 
             // When & Then
             mockMvc.perform(post("/api/v1/auth/logout")
+                    .with(authentication(buildUserAuthentication()))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request))
                     .header("Authorization", "Bearer valid-token"))
@@ -300,7 +319,6 @@ class AuthControllerTest {
 
         @Test
         @DisplayName("Should return error when logout fails")
-        @WithMockUser(username = "test@example.com", roles = "CUSTOMER")
         void shouldReturnErrorWhenLogoutFails() throws Exception {
             // Given
             AuthDto.RefreshTokenRequest request = AuthDto.RefreshTokenRequest.builder()
@@ -312,6 +330,7 @@ class AuthControllerTest {
 
             // When & Then
             mockMvc.perform(post("/api/v1/auth/logout")
+                    .with(authentication(buildUserAuthentication()))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(request))
                     .header("Authorization", "Bearer valid-token"))
@@ -336,4 +355,18 @@ class AuthControllerTest {
                     .andExpect(jsonPath("$.data").value("OK"));
         }
     }
+
+        private Authentication buildUserAuthentication() {
+                User principal = User.builder()
+                                .id(1L)
+                                .email("test@example.com")
+                                .password("encoded-password")
+                                .firstName("Test")
+                                .lastName("User")
+                                .role(User.UserRole.CUSTOMER)
+                                .active(true)
+                                .emailVerified(true)
+                                .build();
+                return new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+        }
 }
