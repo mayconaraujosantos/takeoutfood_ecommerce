@@ -12,7 +12,7 @@ Este documento registra as decisoes de hardening aplicadas aos workflows.
 
 - `actions/checkout@v5` -> `93cb6efe18208431cddfb8368fd83d5badbf9bfd`
 - `actions/setup-java@v5` -> `0f481fcb613427c0f801b606911222b5b6f3083a`
-- `actions/upload-artifact@v5` -> `330a01c490aca151604b8cf639adc76d48f6c5d4`
+- `actions/upload-artifact@v7` -> `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`
 - `docker/setup-buildx-action@v3` -> `8d2750c68a42422c14e847fe6c8ac0403b4cbd6f`
 - `docker/login-action@v3` -> `c94ce9fb468520275223c153574b00df6fe4bcc9`
 - `docker/metadata-action@v5` -> `c299e40c65443455700f0fdfc63efafe5b349051`
