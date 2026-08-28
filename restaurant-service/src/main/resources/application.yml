@@ -4,7 +4,7 @@ spring:
   profiles:
     active: docker
   config:
-    import: "optional:configserver:http://config-server:8888"
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://config-server:8888}"
   cloud:
     config:
       enabled: true
@@ -38,7 +38,7 @@ eureka:
     prefer-ip-address: true
   client:
     service-url:
-      defaultZone: http://service-discovery:8761/eureka/
+      defaultZone: ${EUREKA_SERVER_URL:http://service-discovery:8761}/eureka/
     register-with-eureka: true
     fetch-registry: true
 

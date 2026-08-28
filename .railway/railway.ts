@@ -15,6 +15,11 @@ export default defineRailway(() => {
   const cache = redis("redis");
   const mongoDb = mongo("mongo");
 
+  // Railway's own db.env.DATABASE_URL is "postgresql://..." (no jdbc: prefix),
+  // which every service's spring.datasource.url rejects. Build our own.
+  const postgresJdbcUrl =
+    "jdbc:postgresql://${{postgres.PGHOST}}:${{postgres.PGPORT}}/${{postgres.PGDATABASE}}";
+
   // ---- Kafka (no native Railway resource, deployed as plain Docker images) ----
   const zookeeperVolume = volume("zookeeper-data");
   const zookeeper = service("zookeeper", {
@@ -52,11 +57,6 @@ export default defineRailway(() => {
   const configServer = service("config-server", {
     source: repoSource,
     build: { builder: "DOCKERFILE", dockerfilePath: "config-server/Dockerfile" },
-    // Diagnostic: app consistently boots and listens within ~2-9s, but the
-    // platform healthcheck/readiness probe never confirmed reachability
-    // within the default 2-minute window (with or without an explicit
-    // healthcheckPath). Testing a much longer window in case this project's
-    // private networking is just slow to provision, not broken.
     healthcheck: "/actuator/health",
     healthcheckTimeout: 120,
     deploy: { restartPolicyType: "ON_FAILURE", restartPolicyMaxRetries: 3 },
@@ -118,7 +118,7 @@ export default defineRailway(() => {
       SPRING_PROFILES_ACTIVE: "dev",
       CONFIG_SERVER_URL: configServerUrl,
       EUREKA_SERVER_URL: eurekaUrl,
-      DATABASE_URL: db.env.DATABASE_URL,
+      DATABASE_URL: postgresJdbcUrl,
       DB_HOST: db.env.PGHOST,
       DB_PORT: db.env.PGPORT,
       DB_NAME: db.env.PGDATABASE,
@@ -145,7 +145,9 @@ export default defineRailway(() => {
       SPRING_PROFILES_ACTIVE: "docker",
       CONFIG_SERVER_URL: configServerUrl,
       EUREKA_SERVER_URL: eurekaUrl,
-      DATABASE_URL: db.env.DATABASE_URL,
+      DATABASE_URL: postgresJdbcUrl,
+      DB_USERNAME: db.env.PGUSER,
+      DB_PASSWORD: db.env.PGPASSWORD,
       KAFKA_BOOTSTRAP_SERVERS: kafkaBootstrap,
       PORT: "8082",
     },
@@ -161,7 +163,7 @@ export default defineRailway(() => {
       SPRING_PROFILES_ACTIVE: "docker",
       CONFIG_SERVER_URL: configServerUrl,
       EUREKA_SERVER_URL: eurekaUrl,
-      DATABASE_URL: db.env.DATABASE_URL,
+      DATABASE_URL: postgresJdbcUrl,
       DB_USERNAME: db.env.PGUSER,
       DB_PASSWORD: db.env.PGPASSWORD,
       KAFKA_BOOTSTRAP_SERVERS: kafkaBootstrap,
@@ -179,7 +181,7 @@ export default defineRailway(() => {
       SPRING_PROFILES_ACTIVE: "docker",
       CONFIG_SERVER_URL: configServerUrl,
       EUREKA_SERVER_URL: eurekaUrl,
-      DATABASE_URL: db.env.DATABASE_URL,
+      DATABASE_URL: postgresJdbcUrl,
       DB_USERNAME: db.env.PGUSER,
       DB_PASSWORD: db.env.PGPASSWORD,
       KAFKA_BOOTSTRAP_SERVERS: kafkaBootstrap,
@@ -197,7 +199,7 @@ export default defineRailway(() => {
       SPRING_PROFILES_ACTIVE: "docker",
       CONFIG_SERVER_URL: configServerUrl,
       EUREKA_SERVER_URL: eurekaUrl,
-      DATABASE_URL: db.env.DATABASE_URL,
+      DATABASE_URL: postgresJdbcUrl,
       DB_USERNAME: db.env.PGUSER,
       DB_PASSWORD: db.env.PGPASSWORD,
       KAFKA_BOOTSTRAP_SERVERS: kafkaBootstrap,
@@ -215,7 +217,7 @@ export default defineRailway(() => {
       SPRING_PROFILES_ACTIVE: "docker",
       CONFIG_SERVER_URL: configServerUrl,
       EUREKA_SERVER_URL: eurekaUrl,
-      DATABASE_URL: db.env.DATABASE_URL,
+      DATABASE_URL: postgresJdbcUrl,
       DB_USERNAME: db.env.PGUSER,
       DB_PASSWORD: db.env.PGPASSWORD,
       KAFKA_BOOTSTRAP_SERVERS: kafkaBootstrap,
@@ -233,7 +235,7 @@ export default defineRailway(() => {
       SPRING_PROFILES_ACTIVE: "docker",
       CONFIG_SERVER_URL: configServerUrl,
       EUREKA_SERVER_URL: eurekaUrl,
-      DATABASE_URL: db.env.DATABASE_URL,
+      DATABASE_URL: postgresJdbcUrl,
       DB_USERNAME: db.env.PGUSER,
       DB_PASSWORD: db.env.PGPASSWORD,
       KAFKA_BOOTSTRAP_SERVERS: kafkaBootstrap,
