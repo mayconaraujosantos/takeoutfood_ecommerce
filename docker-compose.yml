@@ -129,12 +129,22 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - service-discovery
-      - config-server
+      service-discovery:
+        condition: service_started
+      config-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: prod
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_SERVER_URL: http://service-discovery:8761
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_USER: ifood_user
+      REDIS_PASSWORD: ifood_redis_pass
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
     labels:
       - "logging=promtail"
     volumes:

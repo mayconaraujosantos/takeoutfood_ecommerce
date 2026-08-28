@@ -1,5 +1,14 @@
-# Runtime-only image for optimized deployment
-# Build JAR locally first with: ./mvnw clean package -DskipTests -pl review-service
+# Multi-stage build: compiles the module inside the image, no local pre-build required.
+FROM eclipse-temurin:21-jdk-alpine AS build
+
+WORKDIR /build
+
+COPY . .
+
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw && \
+    ./mvnw clean package spring-boot:repackage -DskipTests -pl review-service -am
+
+# Runtime-only image
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
@@ -8,8 +17,7 @@ WORKDIR /app
 RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup
 
-# Copy JAR from local build (build JAR first with: ./mvnw clean package -DskipTests -pl review-service)
-COPY review-service/target/*.jar app.jar
+COPY --from=build /build/review-service/target/*.jar app.jar
 
 # Change ownership to non-root user
 RUN chown -R appuser:appgroup /app

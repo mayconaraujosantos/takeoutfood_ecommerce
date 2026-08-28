@@ -1,5 +1,14 @@
-# Runtime-only image for optimized deployment
-# Build JAR locally first with: ./mvnw clean package -DskipTests -pl service-discovery
+# Multi-stage build: compiles the module inside the image, no local pre-build required.
+FROM eclipse-temurin:21-jdk-alpine AS build
+
+WORKDIR /build
+
+COPY . .
+
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw && \
+    ./mvnw clean package spring-boot:repackage -DskipTests -pl service-discovery -am
+
+# Runtime-only image
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
@@ -8,8 +17,7 @@ WORKDIR /app
 RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup
 
-# Copy JAR from local build (build JAR first with: ./mvnw clean package -DskipTests -pl service-discovery)
-COPY service-discovery/target/*.jar app.jar
+COPY --from=build /build/service-discovery/target/*.jar app.jar
 
 # Change ownership to non-root user
 RUN chown -R appuser:appgroup /app
@@ -19,9 +27,9 @@ USER appuser
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8089/actuator/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8761/actuator/health || exit 1
 
-EXPOSE 8089
+EXPOSE 8761
 
 # Optimized JVM arguments for Alpine
 ENTRYPOINT ["java", \

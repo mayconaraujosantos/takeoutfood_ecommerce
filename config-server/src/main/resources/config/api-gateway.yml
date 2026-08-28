@@ -40,7 +40,6 @@ spring:
           filters:
             - AddResponseHeader=X-Route-Type, public
             - AddResponseHeader=X-Service-Name, auth-service
-            - StripPrefix=3
 
         # Authentication Service - Protected routes
         - id: auth-service-protected
@@ -53,7 +52,6 @@ spring:
                 requireAuth: true
             - AddResponseHeader=X-Route-Type, protected
             - AddResponseHeader=X-Service-Name, auth-service
-            - StripPrefix=3
 
         # User Management Service - Protected routes
         - id: user-service
@@ -182,7 +180,7 @@ spring:
         add-to-simple-url-handler-mapping: true
         corsConfigurations:
           "[/**]":
-            allowCredentials: true
+            allowCredentials: false
             allowedOriginPatterns:
               - "http://localhost:*"
               - "https://*.ifoodclone.com"
