@@ -52,11 +52,20 @@ export default defineRailway(() => {
   const configServer = service("config-server", {
     source: repoSource,
     build: { builder: "DOCKERFILE", dockerfilePath: "config-server/Dockerfile" },
+    // Diagnostic: app consistently boots and listens within ~2-9s, but the
+    // platform healthcheck/readiness probe never confirmed reachability
+    // within the default 2-minute window (with or without an explicit
+    // healthcheckPath). Testing a much longer window in case this project's
+    // private networking is just slow to provision, not broken.
     healthcheck: "/actuator/health",
     healthcheckTimeout: 120,
     deploy: { restartPolicyType: "ON_FAILURE", restartPolicyMaxRetries: 3 },
     env: {
       SPRING_PROFILES_ACTIVE: "native",
+      // The app doesn't read $PORT (fixed port per service), so Railway
+      // needs this explicitly to know where to target its healthcheck.
+      // See: docs.railway.com/deployments/healthchecks#configure-the-healthcheck-port
+      PORT: "8888",
     },
   });
 
@@ -71,6 +80,7 @@ export default defineRailway(() => {
     env: {
       SPRING_PROFILES_ACTIVE: "docker",
       CONFIG_SERVER_URL: configServerUrl,
+      PORT: "8761",
     },
   });
 
@@ -93,6 +103,7 @@ export default defineRailway(() => {
       SPRING_DATA_REDIS_HOST: cache.env.REDISHOST,
       SPRING_DATA_REDIS_PORT: cache.env.REDISPORT,
       JWT_SECRET,
+      PORT: "8080",
     },
   });
 
@@ -120,6 +131,7 @@ export default defineRailway(() => {
       SPRING_DATA_REDIS_HOST: cache.env.REDISHOST,
       SPRING_DATA_REDIS_PORT: cache.env.REDISPORT,
       JWT_SECRET,
+      PORT: "8081",
     },
   });
 
@@ -135,6 +147,7 @@ export default defineRailway(() => {
       EUREKA_SERVER_URL: eurekaUrl,
       DATABASE_URL: db.env.DATABASE_URL,
       KAFKA_BOOTSTRAP_SERVERS: kafkaBootstrap,
+      PORT: "8082",
     },
   });
 
@@ -152,6 +165,7 @@ export default defineRailway(() => {
       DB_USERNAME: db.env.PGUSER,
       DB_PASSWORD: db.env.PGPASSWORD,
       KAFKA_BOOTSTRAP_SERVERS: kafkaBootstrap,
+      PORT: "8083",
     },
   });
 
@@ -169,6 +183,7 @@ export default defineRailway(() => {
       DB_USERNAME: db.env.PGUSER,
       DB_PASSWORD: db.env.PGPASSWORD,
       KAFKA_BOOTSTRAP_SERVERS: kafkaBootstrap,
+      PORT: "8084",
     },
   });
 
@@ -186,6 +201,7 @@ export default defineRailway(() => {
       DB_USERNAME: db.env.PGUSER,
       DB_PASSWORD: db.env.PGPASSWORD,
       KAFKA_BOOTSTRAP_SERVERS: kafkaBootstrap,
+      PORT: "8085",
     },
   });
 
@@ -203,6 +219,7 @@ export default defineRailway(() => {
       DB_USERNAME: db.env.PGUSER,
       DB_PASSWORD: db.env.PGPASSWORD,
       KAFKA_BOOTSTRAP_SERVERS: kafkaBootstrap,
+      PORT: "8086",
     },
   });
 
@@ -220,6 +237,7 @@ export default defineRailway(() => {
       DB_USERNAME: db.env.PGUSER,
       DB_PASSWORD: db.env.PGPASSWORD,
       KAFKA_BOOTSTRAP_SERVERS: kafkaBootstrap,
+      PORT: "8088",
     },
   });
 
@@ -236,6 +254,7 @@ export default defineRailway(() => {
       MONGODB_URI:
         "mongodb://${{mongo.MONGOUSER}}:${{mongo.MONGOPASSWORD}}@${{mongo.RAILWAY_PRIVATE_DOMAIN}}:27017/ifood_notifications",
       KAFKA_BOOTSTRAP_SERVERS: kafkaBootstrap,
+      PORT: "8087",
     },
   });
 
@@ -252,6 +271,7 @@ export default defineRailway(() => {
       MONGODB_URI:
         "mongodb://${{mongo.MONGOUSER}}:${{mongo.MONGOPASSWORD}}@${{mongo.RAILWAY_PRIVATE_DOMAIN}}:27017/ifood_reviews",
       KAFKA_BOOTSTRAP_SERVERS: kafkaBootstrap,
+      PORT: "8089",
     },
   });
 
