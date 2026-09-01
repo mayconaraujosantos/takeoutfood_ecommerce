@@ -6,11 +6,12 @@ import java.util.Map;
 
 import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.cloud.gateway.route.RouteDefinitionLocator;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import reactor.core.publisher.Mono;
 
@@ -20,12 +21,25 @@ import reactor.core.publisher.Mono;
 @RestController
 public class OpenApiController {
 
-    private final RouteDefinitionLocator routeDefinitionLocator;
-    private final RestTemplate restTemplate;
+    // Ports match each service's fixed server.port (see each module's application.yml /
+    // config-server's config/*.yml) - container hostnames match the docker-compose service names.
+    private static final Map<String, Integer> SERVICE_PORTS = Map.ofEntries(
+            Map.entry("auth-service", 8081),
+            Map.entry("user-service", 8082),
+            Map.entry("restaurant-service", 8083),
+            Map.entry("menu-service", 8084),
+            Map.entry("order-service", 8085),
+            Map.entry("payment-service", 8086),
+            Map.entry("notification-service", 8087),
+            Map.entry("delivery-service", 8088),
+            Map.entry("review-service", 8089));
 
-    public OpenApiController(RouteDefinitionLocator routeDefinitionLocator, RestTemplate restTemplate) {
+    private final RouteDefinitionLocator routeDefinitionLocator;
+    private final WebClient.Builder webClientBuilder;
+
+    public OpenApiController(RouteDefinitionLocator routeDefinitionLocator, WebClient.Builder webClientBuilder) {
         this.routeDefinitionLocator = routeDefinitionLocator;
-        this.restTemplate = restTemplate;
+        this.webClientBuilder = webClientBuilder;
     }
 
     /**
@@ -39,20 +53,23 @@ public class OpenApiController {
     }
 
     /**
-     * Returns OpenAPI specification for a specific service
+     * Returns OpenAPI specification for a specific service, called directly on its
+     * fixed container hostname:port (same ones docker-compose/gitops wire up).
      */
     @GetMapping("/v3/api-docs/{service}")
-    public ResponseEntity<String> getServiceApiDocs(@PathVariable String service) {
-        try {
-            // Map service names to their actual service discovery names
-            String serviceName = mapServiceName(service);
-            String url = String.format("http://%s/v3/api-docs", serviceName);
-
-            String apiDocs = restTemplate.getForObject(url, String.class);
-            return ResponseEntity.ok(apiDocs);
-        } catch (Exception e) {
-            return ResponseEntity.notFound().build();
+    public Mono<ResponseEntity<String>> getServiceApiDocs(@PathVariable("service") String service) {
+        String serviceName = mapServiceName(service);
+        Integer port = SERVICE_PORTS.get(serviceName);
+        if (port == null) {
+            return Mono.just(ResponseEntity.notFound().build());
         }
+        return webClientBuilder.build()
+                .get()
+                .uri("http://{service}:{port}/v3/api-docs", serviceName, port)
+                .retrieve()
+                .bodyToMono(String.class)
+                .map(ResponseEntity::ok)
+                .onErrorReturn(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
     private Map<String, Object> createServicesResponse(List<RouteDefinition> routes) {
@@ -73,18 +90,11 @@ public class OpenApiController {
     }
 
     private String mapServiceName(String service) {
-        // Map gateway service names to actual service discovery names
-        Map<String, String> serviceMapping = Map.of(
-                "auth-service", "auth-service",
-                "user-service", "user-service",
-                "restaurant-service", "restaurant-service",
-                "menu-service", "menu-service",
-                "order-service", "order-service",
-                "payment-service", "payment-service",
-                "delivery-service", "delivery-service",
-                "review-service", "review-service",
-                "notification-service", "notification-service");
-
-        return serviceMapping.getOrDefault(service, service);
+        // Route ids are the Eureka service id already, except auth-service's
+        // split public/protected routes, which both point at the same instance.
+        if (service.startsWith("auth-service")) {
+            return "auth-service";
+        }
+        return service;
     }
 }

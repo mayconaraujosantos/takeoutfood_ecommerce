@@ -28,7 +28,7 @@ public class SecurityConfig {
                         // Public endpoints for monitoring and documentation
                         .requestMatchers(
                                 "/actuator/**",
-                                "/api-docs/**",
+                                "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/webjars/**",

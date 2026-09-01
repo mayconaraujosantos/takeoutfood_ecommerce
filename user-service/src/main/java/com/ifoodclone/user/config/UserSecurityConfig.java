@@ -27,7 +27,7 @@ public class UserSecurityConfig {
         private static final List<String> EXCLUDED_PATHS = Arrays.asList(
                 "/actuator/health",
                 "/actuator/info",
-                "/api-docs",
+                "/v3/api-docs",
                 "/swagger-ui");
 
         @Override

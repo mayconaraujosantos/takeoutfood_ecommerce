@@ -9,5 +9,5 @@ service:
   targetPort: 8087
 
 env:
-  MONGODB_URI: mongodb://ifood_user:ifood_pass@mongodb:27017/ifood_notifications
+  MONGODB_URI: mongodb://ifood_user:ifood_pass@mongodb:27017/ifood_notifications?authSource=admin
   KAFKA_BOOTSTRAP_SERVERS: kafka:9092
