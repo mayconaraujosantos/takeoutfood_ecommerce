@@ -1,0 +1,14 @@
+nameOverride: user-service
+springProfile: docker
+
+image:
+  repository: localhost/ifood-clone/user-service
+  tag: local
+
+service:
+  port: 8082
+  targetPort: 8082
+
+env:
+  DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092

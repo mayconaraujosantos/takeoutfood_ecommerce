@@ -1,0 +1,13 @@
+nameOverride: review-service
+
+image:
+  repository: localhost/ifood-clone/review-service
+  tag: local
+
+service:
+  port: 8089
+  targetPort: 8089
+
+env:
+  MONGODB_URI: mongodb://ifood_user:ifood_pass@mongodb:27017/ifood_reviews
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092

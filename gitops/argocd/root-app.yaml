@@ -1,0 +1,29 @@
+# App-of-apps root Application. Apply this once by hand after installing Argo CD:
+#   kubectl apply -f gitops/argocd/root-app.yaml
+# From then on, Argo CD watches gitops/environments/local/applications and
+# creates/updates/removes the child Applications (infra, observability, services)
+# by itself - adding a new file there is enough, no more kubectl apply needed.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ifood-root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/mayconaraujosantos/takeoutfood_ecommerce.git
+    targetRevision: main
+    path: gitops/environments/local/applications
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

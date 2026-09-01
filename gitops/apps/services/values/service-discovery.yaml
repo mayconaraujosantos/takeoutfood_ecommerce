@@ -1,0 +1,16 @@
+nameOverride: service-discovery
+
+image:
+  repository: localhost/ifood-clone/service-discovery
+  tag: local
+
+service:
+  port: 8761
+  targetPort: 8761
+
+probes:
+  path: /actuator/health
+  initialDelaySeconds: 30
+
+serviceDiscovery:
+  enabled: false

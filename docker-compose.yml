@@ -242,6 +242,10 @@ services:
       DB_USERNAME: ifood_user
       DB_PASSWORD: ifood_pass
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
     networks:
       - ifood-network
 
@@ -268,6 +272,10 @@ services:
       DB_USERNAME: ifood_user
       DB_PASSWORD: ifood_pass
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
     networks:
       - ifood-network
 
@@ -294,6 +302,10 @@ services:
       DB_USERNAME: ifood_user
       DB_PASSWORD: ifood_pass
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
     networks:
       - ifood-network
 
@@ -320,6 +332,10 @@ services:
       DB_USERNAME: ifood_user
       DB_PASSWORD: ifood_pass
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
     networks:
       - ifood-network
 
@@ -374,6 +390,10 @@ services:
       DB_USERNAME: ifood_user
       DB_PASSWORD: ifood_pass
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
     networks:
       - ifood-network
 
@@ -398,6 +418,10 @@ services:
       EUREKA_SERVER_URL: http://service-discovery:8761
       MONGODB_URI: mongodb://ifood_user:ifood_pass@mongodb:27017/ifood_reviews
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
     networks:
       - ifood-network
 

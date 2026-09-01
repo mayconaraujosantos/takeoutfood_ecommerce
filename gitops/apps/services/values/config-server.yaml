@@ -1,0 +1,17 @@
+nameOverride: config-server
+springProfile: native
+
+image:
+  repository: localhost/ifood-clone/config-server
+  tag: local
+
+service:
+  port: 8888
+  targetPort: 8888
+
+probes:
+  path: /actuator/health
+  initialDelaySeconds: 20
+
+serviceDiscovery:
+  enabled: false

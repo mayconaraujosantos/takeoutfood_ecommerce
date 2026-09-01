@@ -1,0 +1,15 @@
+nameOverride: restaurant-service
+
+image:
+  repository: localhost/ifood-clone/restaurant-service
+  tag: local
+
+service:
+  port: 8083
+  targetPort: 8083
+
+env:
+  DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+  DB_USERNAME: ifood_user
+  DB_PASSWORD: ifood_pass
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092

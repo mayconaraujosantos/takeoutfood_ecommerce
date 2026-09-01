@@ -1,0 +1,15 @@
+nameOverride: payment-service
+
+image:
+  repository: localhost/ifood-clone/payment-service
+  tag: local
+
+service:
+  port: 8086
+  targetPort: 8086
+
+env:
+  DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+  DB_USERNAME: ifood_user
+  DB_PASSWORD: ifood_pass
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
