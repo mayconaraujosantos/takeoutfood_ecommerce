@@ -1,8 +1,8 @@
 nameOverride: api-gateway
 
 image:
-  repository: localhost/ifood-clone/api-gateway
-  tag: local
+  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/api-gateway
+  tag: main
 
 service:
   port: 8080

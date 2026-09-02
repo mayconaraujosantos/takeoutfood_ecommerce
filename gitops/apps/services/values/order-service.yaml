@@ -1,8 +1,8 @@
 nameOverride: order-service
 
 image:
-  repository: localhost/ifood-clone/order-service
-  tag: local
+  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/order-service
+  tag: main
 
 service:
   port: 8085

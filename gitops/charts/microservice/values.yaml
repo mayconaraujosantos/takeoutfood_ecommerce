@@ -16,6 +16,11 @@ image:
   tag: local
   pullPolicy: IfNotPresent
 
+# Set when pulling from a private registry (e.g. a private ghcr.io package):
+# imagePullSecrets:
+#   - name: ghcr-pull-secret
+imagePullSecrets: []
+
 service:
   port: 8080
   targetPort: 8080

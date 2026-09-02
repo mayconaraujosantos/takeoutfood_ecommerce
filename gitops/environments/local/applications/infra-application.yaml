@@ -1,0 +1,23 @@
+# Deploys gitops/apps/infra (PostgreSQL, MongoDB, Redis, Kafka) into the
+# "services" namespace, alongside the microservices, so short DNS names like
+# "postgres"/"redis" resolve without needing a namespace suffix.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ifood-infra
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/mayconaraujosantos/takeoutfood_ecommerce.git
+    targetRevision: main
+    path: gitops/apps/infra
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: services
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

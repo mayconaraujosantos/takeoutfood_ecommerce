@@ -2,8 +2,8 @@ nameOverride: config-server
 springProfile: native
 
 image:
-  repository: localhost/ifood-clone/config-server
-  tag: local
+  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/config-server
+  tag: main
 
 service:
   port: 8888

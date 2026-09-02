@@ -1,0 +1,23 @@
+# Deploys gitops/apps/observability (kube-prometheus-stack, Loki, Promtail,
+# Jaeger, otel-collector) into its own "observability" namespace. Referenced
+# by the microservice chart's default tracing.otlpEndpoint.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ifood-observability
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/mayconaraujosantos/takeoutfood_ecommerce.git
+    targetRevision: main
+    path: gitops/apps/observability
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

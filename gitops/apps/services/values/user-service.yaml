@@ -2,8 +2,8 @@ nameOverride: user-service
 springProfile: docker
 
 image:
-  repository: localhost/ifood-clone/user-service
-  tag: local
+  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/user-service
+  tag: main
 
 service:
   port: 8082

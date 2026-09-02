@@ -1,8 +1,8 @@
 nameOverride: service-discovery
 
 image:
-  repository: localhost/ifood-clone/service-discovery
-  tag: local
+  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/service-discovery
+  tag: main
 
 service:
   port: 8761

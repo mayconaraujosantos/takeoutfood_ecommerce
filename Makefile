@@ -754,11 +754,11 @@ gitops-helm-deps: ## Resolve Helm chart deps for gitops/apps/{infra,observabilit
 	@./scripts/gitops/helm-deps.sh
 
 .PHONY: gitops-build-images
-gitops-build-images: ## Build all 12 microservice images with Podman
+gitops-build-images: ## (offline/dev only) Build all 12 microservice images with Podman, tagged :local
 	@./scripts/gitops/build-images.sh
 
 .PHONY: gitops-load-images
-gitops-load-images: ## Load the built images into Minikube (no registry needed)
+gitops-load-images: ## (offline/dev only) Load the :local images built above into Minikube
 	@./scripts/gitops/load-images.sh
 
 .PHONY: gitops-bootstrap
@@ -766,9 +766,14 @@ gitops-bootstrap: ## Apply the Argo CD app-of-apps (infra + observability + serv
 	@kubectl apply -f gitops/argocd/root-app.yaml
 
 .PHONY: gitops-up
-gitops-up: gitops-cluster-up gitops-argocd-install gitops-helm-deps gitops-build-images gitops-load-images gitops-bootstrap ## Full local GitOps bootstrap end-to-end
+gitops-up: gitops-cluster-up gitops-argocd-install gitops-helm-deps gitops-bootstrap ## Full local GitOps bootstrap end-to-end (pulls images from ghcr.io, built by CI)
 	@echo "$(GREEN)🎉 Argo CD GitOps environment bootstrapped!$(NC)"
 	@echo "$(CYAN)Port-forward the Argo CD UI:$(NC) kubectl -n argocd port-forward svc/argocd-server 8080:443"
+	@echo "$(YELLOW)Note:$(NC) services pull images from ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/<service>,"
+	@echo "      built by .github/workflows/ci-cd.yml on every push to main. If this is the first run and"
+	@echo "      CI hasn't pushed yet (or the ghcr packages are still private), pods will fail to pull the"
+	@echo "      image - either wait for CI, make the packages public, or use 'make gitops-build-images"
+	@echo "      gitops-load-images' + '--set image.repository=... --set image.tag=local' for an offline run."
 
 # Default target
 .DEFAULT_GOAL := help

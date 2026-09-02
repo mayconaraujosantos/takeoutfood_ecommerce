@@ -1,8 +1,8 @@
 nameOverride: menu-service
 
 image:
-  repository: localhost/ifood-clone/menu-service
-  tag: local
+  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/menu-service
+  tag: main
 
 service:
   port: 8084

@@ -1,8 +1,8 @@
 nameOverride: review-service
 
 image:
-  repository: localhost/ifood-clone/review-service
-  tag: local
+  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/review-service
+  tag: main
 
 service:
   port: 8089
