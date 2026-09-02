@@ -7,6 +7,8 @@ metadata:
   name: ifood-services
   namespace: argocd
 spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
   generators:
     - git:
         repoURL: https://github.com/mayconaraujosantos/takeoutfood_ecommerce.git
@@ -15,7 +17,7 @@ spec:
           - path: "gitops/apps/services/values/*.yaml"
   template:
     metadata:
-      name: "svc-{{path.basenameNormalized}}"
+      name: "svc-{{ trimSuffix \".yaml\" .path.filename }}"
       namespace: argocd
     spec:
       project: default
@@ -25,7 +27,7 @@ spec:
         path: gitops/charts/microservice
         helm:
           valueFiles:
-            - "../../apps/services/values/{{path.basename}}"
+            - "../../apps/services/values/{{ .path.filename }}"
       destination:
         server: https://kubernetes.default.svc
         namespace: services

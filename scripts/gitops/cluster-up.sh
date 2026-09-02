@@ -15,9 +15,14 @@ if minikube status -p "$CLUSTER_NAME" >/dev/null 2>&1; then
   echo "Minikube profile '$CLUSTER_NAME' is already running."
 else
   echo "Starting Minikube profile '$CLUSTER_NAME' (driver=podman, cpus=$CPUS, memory=${MEMORY}MB)..."
+  # --container-runtime=containerd: the docker runtime's node bootstrap tries to
+  # rewrite/restart docker.service via systemd, which fails under rootless Podman
+  # (no privilege to manage the host's docker.service). containerd's bootstrap
+  # doesn't need that step, so it works with the podman driver in rootless mode.
   minikube start \
     -p "$CLUSTER_NAME" \
     --driver=podman \
+    --container-runtime=containerd \
     --cpus="$CPUS" \
     --memory="$MEMORY" \
     --addons=ingress,metrics-server
