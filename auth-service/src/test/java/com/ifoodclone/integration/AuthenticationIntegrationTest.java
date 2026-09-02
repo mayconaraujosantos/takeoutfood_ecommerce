@@ -14,6 +14,7 @@ import com.ifoodclone.auth.service.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -39,6 +40,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 }, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @ActiveProfiles("integration-test")
+@Tag("integration")
 @DisplayName("Authentication Integration Tests")
 class AuthenticationIntegrationTest {
 

@@ -354,6 +354,8 @@
                         <exclude>**/*IntegrationTest.java</exclude>
                         <exclude>**/*IT.java</exclude>
                     </excludes>
+                    <!-- Tag-based exclusion for JUnit 5 (more reliable with @Nested) -->
+                    <excludedGroups>integration</excludedGroups>
                 </configuration>
             </plugin>
 
