@@ -65,6 +65,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/password/reset", "/api/v1/auth/password/reset/confirm")
                         .permitAll()
                         .requestMatchers("/api/v1/auth/email/verify").permitAll()
+                        .requestMatchers("/api/v1/auth/health").permitAll()
 
                         // Development endpoints (local/dev profile only)
                         .requestMatchers("/api/dev/**").permitAll()
