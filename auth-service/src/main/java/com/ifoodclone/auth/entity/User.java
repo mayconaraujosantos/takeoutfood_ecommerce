@@ -141,7 +141,10 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return active && emailVerified;
+        // Email verification isn't a functioning flow yet (POST /email/verify is a stub
+        // that never sets emailVerified=true), so gating login on it locks out every
+        // account permanently. Login should reflect what's actually enforced: active.
+        return active;
     }
 
     // Business methods
