@@ -6,6 +6,15 @@
 kube-prometheus-stack:
   enabled: true
   fullnameOverride: kube-prometheus-stack
+  # These CRDs (esp. Prometheus/Alertmanager/ThanosRuler/PrometheusAgent) are large enough
+  # that any tool which stuffs a full copy of the object into an annotation (Helm/ArgoCD's
+  # apply pipeline for the chart's crds/ folder does this regardless of ServerSideApply=true
+  # on the Application) trips the 262144-byte kubectl.kubernetes.io/last-applied-configuration
+  # limit. Managed out of band instead: applied once with
+  # `kubectl apply --server-side -f <rendered CRDs>`, which never sets that annotation.
+  # Re-run that after bumping the chart version if the CRDs change upstream.
+  crds:
+    enabled: false
   grafana:
     enabled: true
     adminPassword: ifood_grafana_pass
