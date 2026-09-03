@@ -184,7 +184,7 @@ zipkin/
 k8s-secrets/
 
 # Helm
-charts/*.tgz
+**/charts/*.tgz
 
 # ========== BUILD TOOLS ==========
 # npm (if using Node.js for frontend)
@@ -287,3 +287,8 @@ experiments/
 override/
 local-config/
 .history/
+
+# Exception: the Argo CD app-of-apps directory is literally named "local"
+# (the Minikube environment) and must stay tracked despite the local/ rule above.
+!gitops/environments/local/
+!gitops/environments/local/**

@@ -89,7 +89,7 @@ class UserSecurityConfigTest {
         @DisplayName("Should skip authentication for API docs")
         void shouldSkipAuthenticationForApiDocs() throws ServletException, IOException {
             // Given
-            request.setRequestURI("/api-docs/swagger-ui.html");
+            request.setRequestURI("/v3/api-docs");
 
             // When
             userContextFilter.doFilterInternal(request, response, filterChain);
@@ -109,15 +109,21 @@ class UserSecurityConfigTest {
             request.addHeader("X-User-Roles", "CUSTOMER");
             request.addHeader("X-Authenticated", "true");
 
+            doAnswer(invocation -> {
+                // Context is only populated while the chain is executing - the filter
+                // clears it in a finally block right after doFilter returns.
+                assertThat(UserContext.getUserId()).isEqualTo(123L);
+                assertThat(UserContext.getUserEmail()).isEqualTo("test@example.com");
+                assertThat(UserContext.getUserRoles()).isEqualTo("CUSTOMER");
+                return null;
+            }).when(filterChain).doFilter(request, response);
+
             // When
             userContextFilter.doFilterInternal(request, response, filterChain);
 
             // Then
             verify(filterChain).doFilter(request, response);
             assertThat(response.getStatus()).isEqualTo(200);
-            assertThat(UserContext.getUserId()).isEqualTo(123L);
-            assertThat(UserContext.getUserEmail()).isEqualTo("test@example.com");
-            assertThat(UserContext.getUserRoles()).isEqualTo("CUSTOMER");
         }
 
         @Test

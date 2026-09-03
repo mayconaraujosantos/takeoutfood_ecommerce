@@ -126,7 +126,7 @@ class AuthenticationIntegrationTest {
 
             // When
             ResponseEntity<AuthDto.ApiResponse> response = restTemplate.postForEntity(
-                    baseUrl + "/api/auth/register",
+                    baseUrl + "/api/v1/auth/register",
                     registerRequest,
                     AuthDto.ApiResponse.class);
 
@@ -162,7 +162,7 @@ class AuthenticationIntegrationTest {
 
             // When
             ResponseEntity<Map> response = restTemplate.postForEntity(
-                    baseUrl + "/api/auth/register",
+                    baseUrl + "/api/v1/auth/register",
                     registerRequest,
                     Map.class);
 
@@ -189,7 +189,7 @@ class AuthenticationIntegrationTest {
 
             // When
             ResponseEntity<AuthDto.ApiResponse> response = restTemplate.postForEntity(
-                    baseUrl + "/api/auth/login",
+                    baseUrl + "/api/v1/auth/login",
                     loginRequest,
                     AuthDto.ApiResponse.class);
 
@@ -226,7 +226,7 @@ class AuthenticationIntegrationTest {
 
             // When
             ResponseEntity<Map> response = restTemplate.postForEntity(
-                    baseUrl + "/api/auth/login",
+                    baseUrl + "/api/v1/auth/login",
                     loginRequest,
                     Map.class);
 
@@ -251,7 +251,7 @@ class AuthenticationIntegrationTest {
 
             // When
             ResponseEntity<Map> response = restTemplate.postForEntity(
-                    baseUrl + "/api/auth/login",
+                    baseUrl + "/api/v1/auth/login",
                     loginRequest,
                     Map.class);
 
@@ -291,7 +291,7 @@ class AuthenticationIntegrationTest {
 
             // When
             ResponseEntity<AuthDto.ApiResponse> response = restTemplate.postForEntity(
-                    baseUrl + "/api/auth/refresh",
+                    baseUrl + "/api/v1/auth/refresh",
                     refreshRequest,
                     AuthDto.ApiResponse.class);
 
@@ -322,7 +322,7 @@ class AuthenticationIntegrationTest {
 
             // When
             ResponseEntity<Map> response = restTemplate.postForEntity(
-                    baseUrl + "/api/auth/refresh",
+                    baseUrl + "/api/v1/auth/refresh",
                     refreshRequest,
                     Map.class);
 
@@ -362,7 +362,7 @@ class AuthenticationIntegrationTest {
 
             // When
             ResponseEntity<AuthDto.ApiResponse> response = restTemplate.exchange(
-                    baseUrl + "/api/auth/profile",
+                    baseUrl + "/api/v1/auth/profile",
                     HttpMethod.GET,
                     entity,
                     AuthDto.ApiResponse.class);
@@ -380,7 +380,7 @@ class AuthenticationIntegrationTest {
         void shouldRejectAccessToProtectedEndpointWithoutToken() {
             // When
             ResponseEntity<AuthDto.ApiResponse> response = restTemplate.getForEntity(
-                    baseUrl + "/api/auth/profile",
+                    baseUrl + "/api/v1/auth/profile",
                     AuthDto.ApiResponse.class);
 
             // Then - With security disabled, endpoint is accessible but will fail due to
@@ -401,7 +401,7 @@ class AuthenticationIntegrationTest {
 
             // When
             ResponseEntity<AuthDto.ApiResponse> response = restTemplate.exchange(
-                    baseUrl + "/api/auth/profile",
+                    baseUrl + "/api/v1/auth/profile",
                     HttpMethod.GET,
                     entity,
                     AuthDto.ApiResponse.class);
@@ -443,7 +443,7 @@ class AuthenticationIntegrationTest {
 
             // When
             ResponseEntity<AuthDto.ApiResponse> response = restTemplate.postForEntity(
-                    baseUrl + "/api/auth/logout",
+                    baseUrl + "/api/v1/auth/logout",
                     logoutRequest,
                     AuthDto.ApiResponse.class);
 
@@ -458,7 +458,7 @@ class AuthenticationIntegrationTest {
                     .build();
 
             ResponseEntity<Map> refreshResponse = restTemplate.postForEntity(
-                    baseUrl + "/api/auth/refresh",
+                    baseUrl + "/api/v1/auth/refresh",
                     refreshRequest,
                     Map.class);
 

@@ -1,0 +1,15 @@
+nameOverride: menu-service
+
+image:
+  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/menu-service
+  tag: e0f17e408756259c48829a840e34c4254c766404
+
+service:
+  port: 8084
+  targetPort: 8084
+
+env:
+  DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+  DB_USERNAME: ifood_user
+  DB_PASSWORD: ifood_pass
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092

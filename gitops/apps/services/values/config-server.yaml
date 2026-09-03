@@ -1,0 +1,17 @@
+nameOverride: config-server
+springProfile: native
+
+image:
+  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/config-server
+  tag: e0f17e408756259c48829a840e34c4254c766404
+
+service:
+  port: 8888
+  targetPort: 8888
+
+probes:
+  path: /actuator/health
+  initialDelaySeconds: 20
+
+serviceDiscovery:
+  enabled: false

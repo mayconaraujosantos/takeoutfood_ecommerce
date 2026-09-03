@@ -1,0 +1,14 @@
+nameOverride: user-service
+springProfile: docker
+
+image:
+  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/user-service
+  tag: e0f17e408756259c48829a840e34c4254c766404
+
+service:
+  port: 8082
+  targetPort: 8082
+
+env:
+  DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092

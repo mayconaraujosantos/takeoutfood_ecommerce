@@ -2,6 +2,7 @@ package com.ifoodclone.auth.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -20,15 +21,24 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+// addFilters = false: this slice isolates AuthController's request-mapping/serialization
+// logic with a mocked AuthService; the security filter chain (JWT parsing, CSRF,
+// authorization rules) has its own coverage in AuthenticationIntegrationTest. Without this,
+// SecurityConfig - a plain @Configuration bean, not a Filter/HandlerInterceptor - isn't
+// picked up by the @WebMvcTest slice at all, so requests would run under Spring Boot's
+// default deny-all/CSRF-enabled security instead of the app's real rules.
 @WebMvcTest(controllers = AuthController.class)
+@AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
 @Import(TestConfig.class)
 @DisplayName("AuthController Unit Tests")
@@ -42,6 +52,9 @@ class AuthControllerTest {
 
     @MockBean
     private AuthService authService;
+
+    @Autowired
+    private UserDetailsService userDetailsService;
 
     private AuthDto.LoginResponse loginResponse;
     private AuthDto.UserInfo userInfo;
@@ -71,6 +84,18 @@ class AuthControllerTest {
                 .refreshToken("refresh-token")
                 .expiresIn(3600L)
                 .build();
+
+        // getCurrentUserId() in AuthController requires the security principal to be a
+        // com.ifoodclone.auth.entity.User (not the generic UserDetails @WithMockUser
+        // would produce), so @WithUserDetails is used below, backed by this stub.
+        User authenticatedUser = User.builder()
+                .id(1L)
+                .email("test@example.com")
+                .password("encoded-password")
+                .role(User.UserRole.CUSTOMER)
+                .active(true)
+                .build();
+        when(userDetailsService.loadUserByUsername(anyString())).thenReturn(authenticatedUser);
     }
 
     @Nested
@@ -245,7 +270,7 @@ class AuthControllerTest {
 
         @Test
         @DisplayName("Should get user profile successfully")
-        @WithMockUser(username = "test@example.com", roles = "CUSTOMER")
+        @WithUserDetails("test@example.com")
         void shouldGetUserProfileSuccessfully() throws Exception {
             // Given
             when(authService.getUserById(anyLong())).thenReturn(userInfo);
@@ -260,7 +285,7 @@ class AuthControllerTest {
 
         @Test
         @DisplayName("Should return error when user not found")
-        @WithMockUser(username = "test@example.com", roles = "CUSTOMER")
+        @WithUserDetails("test@example.com")
         void shouldReturnErrorWhenUserNotFound() throws Exception {
             // Given
             when(authService.getUserById(anyLong()))
@@ -281,7 +306,7 @@ class AuthControllerTest {
 
         @Test
         @DisplayName("Should logout successfully")
-        @WithMockUser(username = "test@example.com", roles = "CUSTOMER")
+        @WithUserDetails("test@example.com")
         void shouldLogoutSuccessfully() throws Exception {
             // Given
             AuthDto.RefreshTokenRequest request = AuthDto.RefreshTokenRequest.builder()
@@ -300,7 +325,7 @@ class AuthControllerTest {
 
         @Test
         @DisplayName("Should return error when logout fails")
-        @WithMockUser(username = "test@example.com", roles = "CUSTOMER")
+        @WithUserDetails("test@example.com")
         void shouldReturnErrorWhenLogoutFails() throws Exception {
             // Given
             AuthDto.RefreshTokenRequest request = AuthDto.RefreshTokenRequest.builder()

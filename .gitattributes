@@ -1,0 +1,5 @@
+# Ensure shell scripts always keep LF endings, regardless of platform checkout settings.
+# Without this, Windows checkouts with core.autocrlf=true convert mvnw to CRLF, which breaks
+# its #!/bin/sh shebang when used as the interpreter inside Linux Docker build stages.
+mvnw text eol=lf
+*.sh text eol=lf

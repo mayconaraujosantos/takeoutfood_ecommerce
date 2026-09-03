@@ -1,0 +1,13 @@
+nameOverride: notification-service
+
+image:
+  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/notification-service
+  tag: e0f17e408756259c48829a840e34c4254c766404
+
+service:
+  port: 8087
+  targetPort: 8087
+
+env:
+  MONGODB_URI: mongodb://ifood_user:ifood_pass@mongodb:27017/ifood_notifications?authSource=admin
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092

@@ -4,7 +4,7 @@ spring:
   profiles:
     active: docker
   config:
-    import: "optional:configserver:http://config-server:8888"
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://config-server:8888}"
   cloud:
     config:
       enabled: true
@@ -38,7 +38,7 @@ eureka:
     prefer-ip-address: true
   client:
     service-url:
-      defaultZone: http://service-discovery:8761/eureka/
+      defaultZone: ${EUREKA_SERVER_URL:http://service-discovery:8761}/eureka/
     register-with-eureka: true
     fetch-registry: true
 
@@ -54,7 +54,18 @@ management:
     circuitbreakers:
       enabled: true
 
+  # OpenTelemetry Tracing Configuration
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0 # 100% sampling for development
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://jaeger:4318}/v1/traces
+
 logging:
   level:
     com.ifoodclone: DEBUG
     org.springframework.cloud: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] [%X{correlationId:-},%X{requestId:-}] %logger{36} - %msg%n"

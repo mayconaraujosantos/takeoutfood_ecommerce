@@ -3,7 +3,7 @@ version: "3.8"
 services:
   # Grafana Loki - Log aggregation system
   loki:
-    image: grafana/loki:2.9.0
+    image: docker.io/grafana/loki:2.9.0
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
@@ -15,7 +15,7 @@ services:
 
   # Promtail - Log collection agent
   promtail:
-    image: grafana/promtail:2.9.0
+    image: docker.io/grafana/promtail:2.9.0
     volumes:
       - ./observability/promtail-config.yml:/etc/promtail/config.yml
       - ./logs:/var/log/ifood:ro
@@ -29,7 +29,7 @@ services:
 
   # Prometheus - Metrics collection
   prometheus:
-    image: prom/prometheus:v2.47.0
+    image: docker.io/prom/prometheus:v2.47.0
     ports:
       - "9090:9090"
     volumes:
@@ -47,7 +47,7 @@ services:
 
   # Grafana - Visualization dashboard
   grafana:
-    image: grafana/grafana:10.1.0
+    image: docker.io/grafana/grafana:10.1.0
     ports:
       - "3000:3000"
     environment:
@@ -65,11 +65,13 @@ services:
 
   # Jaeger - Distributed tracing
   jaeger:
-    image: jaegertracing/all-in-one:1.49
+    image: docker.io/jaegertracing/all-in-one:1.49
     ports:
       - "16686:16686" # Jaeger UI
       - "14268:14268" # HTTP collector
       - "14250:14250" # gRPC collector
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
     environment:
       - COLLECTOR_OTLP_ENABLED=true
     networks:

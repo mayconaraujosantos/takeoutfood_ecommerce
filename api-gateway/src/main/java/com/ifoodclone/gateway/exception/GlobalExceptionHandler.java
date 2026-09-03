@@ -7,6 +7,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
 import org.springframework.core.annotation.Order;
@@ -27,7 +28,7 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class GlobalExceptionHandler implements ErrorWebExceptionHandler {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Override
     public Mono<Void> handle(@NonNull ServerWebExchange exchange, @NonNull Throwable ex) {

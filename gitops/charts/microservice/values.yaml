@@ -1,0 +1,69 @@
+# Default values for the generic microservice chart.
+# Every service under gitops/apps/services/values/*.yaml overrides these.
+
+nameOverride: ""
+
+# Most services don't define a dedicated "k8s" Spring profile and rely on the
+# base application.yml defaults (env-var driven), so "k8s" is a safe default.
+# Services whose active profile has real behavioral meaning (e.g. config-server's
+# "native" profile) must override this in their values file.
+springProfile: k8s
+
+replicaCount: 1
+
+image:
+  repository: localhost/ifood-clone/CHANGEME
+  tag: local
+  pullPolicy: IfNotPresent
+
+# Set when pulling from a private registry (e.g. a private ghcr.io package):
+# imagePullSecrets:
+#   - name: ghcr-pull-secret
+imagePullSecrets: []
+
+service:
+  port: 8080
+  targetPort: 8080
+
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 250m
+  limits:
+    memory: 512Mi
+    cpu: 500m
+
+probes:
+  path: /actuator/health
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  failureThreshold: 6
+
+# Plain key/value env vars, merged on top of the tracing/service-discovery defaults below.
+env: {}
+
+# Extra envFrom sources (ConfigMap/Secret references), e.g.:
+# envFrom:
+#   - secretRef:
+#       name: db-credentials
+envFrom: []
+
+serviceDiscovery:
+  enabled: true
+  configServerUrl: "http://config-server:8888"
+  eurekaServerUrl: "http://service-discovery:8761/eureka/"
+
+tracing:
+  enabled: true
+  # Falls back to the release name / nameOverride when empty.
+  serviceName: ""
+  samplerProbability: "1.0"
+  otlpEndpoint: "http://otel-collector.observability.svc.cluster.local:4318"
+
+serviceMonitor:
+  enabled: true
+  path: /actuator/prometheus
+  interval: 15s
+  labels: {}
+
+podAnnotations: {}

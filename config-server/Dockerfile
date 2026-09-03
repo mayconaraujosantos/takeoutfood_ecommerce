@@ -1,21 +1,23 @@
-# Runtime-only image for optimized deployment
-# Build JAR locally first with: ./mvnw clean package -DskipTests -pl config-server
+# Multi-stage build: compiles the module inside the image, no local pre-build required.
+FROM eclipse-temurin:21-jdk-alpine AS build
+
+WORKDIR /build
+
+COPY . .
+
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw && \
+    ./mvnw clean package spring-boot:repackage -DskipTests -pl config-server -am
+
+# Runtime-only image
 FROM eclipse-temurin:21-jre-alpine
 
-LABEL maintainer="iFood Clone Team"
-LABEL service="config-server"
-LABEL version="1.0"
-
-# Install wget for healthcheck and create non-root user
-RUN apk add --no-cache wget && \
-    addgroup -g 1001 -S appgroup && \
-    adduser -u 1001 -S appuser -G appgroup
-
-# Create app directory
 WORKDIR /app
 
-# Copy JAR from local build (build JAR first with: ./mvnw clean package -DskipTests -pl config-server)
-COPY config-server/target/*.jar app.jar
+# Create non-root user for security
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
+COPY --from=build /build/config-server/target/*.jar app.jar
 
 # Change ownership to non-root user
 RUN chown -R appuser:appgroup /app

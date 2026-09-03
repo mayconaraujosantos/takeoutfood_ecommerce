@@ -15,9 +15,9 @@ spring:
       enabled: false
 
   datasource:
-    url: jdbc:postgresql://postgres:5432/ifood_db
-    username: ifood_user
-    password: ifood_pass
+    url: ${DATABASE_URL:jdbc:postgresql://postgres:5432/ifood_db}
+    username: ${DB_USERNAME:ifood_user}
+    password: ${DB_PASSWORD:ifood_pass}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -29,7 +29,7 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
   kafka:
-    bootstrap-servers: kafka:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
     consumer:
       group-id: user-service-group
       auto-offset-reset: earliest
@@ -53,7 +53,7 @@ management:
       probability: 1.0 # 100% sampling for development
   otlp:
     tracing:
-      endpoint: http://jaeger:4318/v1/traces
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://jaeger:4318}/v1/traces
 
 logging:
   level:
@@ -65,7 +65,7 @@ logging:
 eureka:
   client:
     service-url:
-      defaultZone: http://service-discovery:8761/eureka/
+      defaultZone: ${EUREKA_SERVER_URL:http://service-discovery:8761}/eureka/
     fetch-registry: true
     register-with-eureka: true
   instance:

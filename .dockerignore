@@ -30,14 +30,9 @@ Thumbs.db
 .gitignore
 .gitattributes
 
-# Arquivos de build que não são necessários na imagem final
-target/classes/
-target/test-classes/
-target/generated-sources/
-target/generated-test-sources/
-target/maven-archiver/
-target/maven-status/
-target/surefire-reports/
+# Arquivos de build: agora compilados dentro da imagem (multi-stage), nao sao mais
+# necessarios como input do build
+**/target/
 
 # Arquivos de log
 *.log

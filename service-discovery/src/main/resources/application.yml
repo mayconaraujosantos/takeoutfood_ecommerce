@@ -36,7 +36,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
 
   endpoint:
     health:
@@ -46,13 +46,22 @@ management:
     show-details: always
     show-components: always
 
+  # OpenTelemetry Tracing Configuration
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0 # 100% sampling for development
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://jaeger:4318}/v1/traces
+
 logging:
   level:
     '[com.netflix.eureka]': DEBUG
     '[com.netflix.discovery]': DEBUG
     root: INFO
   pattern:
-    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level [%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n"
 
 ---
 spring:

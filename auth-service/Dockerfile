@@ -1,5 +1,14 @@
-# Runtime-only image for optimized deployment
-# Build JAR locally first with: ./mvnw clean package -DskipTests -pl auth-service
+# Multi-stage build: compiles the module inside the image, no local pre-build required.
+FROM eclipse-temurin:21-jdk-alpine AS build
+
+WORKDIR /build
+
+COPY . .
+
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw && \
+    ./mvnw clean package spring-boot:repackage -DskipTests -pl auth-service -am
+
+# Runtime-only image
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
@@ -12,8 +21,7 @@ RUN addgroup -g 1001 -S appgroup && \
 RUN mkdir -p /app/logs && \
     chown -R appuser:appgroup /app/logs
 
-# Copy JAR from local build (build JAR first with: ./mvnw clean package -DskipTests -pl auth-service)
-COPY auth-service/target/*.jar app.jar
+COPY --from=build /build/auth-service/target/*.jar app.jar
 
 # Change ownership to non-root user
 RUN chown -R appuser:appgroup /app

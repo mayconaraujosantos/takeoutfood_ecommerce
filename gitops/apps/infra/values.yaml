@@ -1,0 +1,98 @@
+# Values for the Bitnami subcharts. Kept close to docker-compose's ifood_db/ifood_user/ifood_pass
+# so the exact same DB creds work whether you run docker-compose or this GitOps path.
+# NOTE: Bitnami chart value keys can shift between major versions - run
+# `helm dependency update gitops/apps/infra` and check `helm show values` against the
+# pinned versions in Chart.yaml if a key below no longer applies.
+#
+# image.repository overrides: since Aug 2025, Bitnami only publishes current-version
+# images under docker.io/bitnami/* (paid "Secure Images" catalog for older tags); the
+# exact tags these chart versions pin now 404 there. Bitnami mirrors the old free-tier
+# images unchanged at docker.io/bitnamilegacy/* - point at that instead.
+
+postgresql:
+  enabled: true
+  fullnameOverride: postgres
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/postgresql
+  auth:
+    username: ifood_user
+    password: ifood_pass
+    database: ifood_db
+  primary:
+    persistence:
+      enabled: true
+      size: 5Gi
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 250m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+
+mongodb:
+  enabled: true
+  fullnameOverride: mongodb
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/mongodb
+  architecture: standalone
+  auth:
+    enabled: true
+    rootUser: ifood_user
+    rootPassword: ifood_pass
+  persistence:
+    enabled: true
+    size: 5Gi
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+redis:
+  enabled: true
+  fullnameOverride: redis
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/redis
+  architecture: standalone
+  auth:
+    enabled: true
+    password: ifood_redis_pass
+  master:
+    persistence:
+      enabled: true
+      size: 2Gi
+    resources:
+      requests:
+        memory: 128Mi
+        cpu: 100m
+      limits:
+        memory: 256Mi
+        cpu: 250m
+
+kafka:
+  enabled: true
+  fullnameOverride: kafka
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/kafka
+  listeners:
+    client:
+      protocol: PLAINTEXT
+  controller:
+    replicaCount: 1
+    persistence:
+      enabled: true
+      size: 5Gi
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 250m
+      limits:
+        memory: 1Gi
+        cpu: 500m

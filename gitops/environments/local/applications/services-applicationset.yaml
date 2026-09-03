@@ -1,0 +1,39 @@
+# One Application per file under gitops/apps/services/values/*.yaml, all
+# rendered from the shared gitops/charts/microservice chart. Add a new
+# service by dropping a values file there - no edits needed here.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: ifood-services
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/mayconaraujosantos/takeoutfood_ecommerce.git
+        revision: main
+        files:
+          - path: "gitops/apps/services/values/*.yaml"
+  template:
+    metadata:
+      name: "svc-{{ trimSuffix \".yaml\" .path.filename }}"
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/mayconaraujosantos/takeoutfood_ecommerce.git
+        targetRevision: main
+        path: gitops/charts/microservice
+        helm:
+          valueFiles:
+            - "../../apps/services/values/{{ .path.filename }}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: services
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

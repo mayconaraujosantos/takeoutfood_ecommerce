@@ -35,7 +35,6 @@ spring:
           filters:
             - AddResponseHeader=X-Route-Type, public
             - AddResponseHeader=X-Service-Name, auth-service
-            - StripPrefix=3
 
         # Authentication Service - Protected routes
         - id: auth-service-protected
@@ -48,7 +47,6 @@ spring:
                 requireAuth: true
             - AddResponseHeader=X-Route-Type, protected
             - AddResponseHeader=X-Service-Name, auth-service
-            - StripPrefix=3
 
         # User Management Service - Protected routes
         - id: user-service
@@ -179,7 +177,7 @@ spring:
         add-to-simple-url-handler-mapping: true
         corsConfigurations:
           "[/**]":
-            allowCredentials: true
+            allowCredentials: false
             allowedOriginPatterns:
               - "http://localhost:*"
               - "https://*.ifoodclone.com"
@@ -250,6 +248,32 @@ resilience4j:
         minimum-number-of-calls: 8
         failure-rate-threshold: 60
         wait-duration-in-open-state: 20s
+
+# SpringDoc: populate the Swagger UI dropdown with every downstream service's spec,
+# served by OpenApiController (which proxies to each service's own /v3/api-docs).
+springdoc:
+  swagger-ui:
+    urls:
+      - name: auth-service-public
+        url: /v3/api-docs/auth-service-public
+      - name: auth-service-protected
+        url: /v3/api-docs/auth-service-protected
+      - name: user-service
+        url: /v3/api-docs/user-service
+      - name: restaurant-service
+        url: /v3/api-docs/restaurant-service
+      - name: menu-service
+        url: /v3/api-docs/menu-service
+      - name: order-service
+        url: /v3/api-docs/order-service
+      - name: payment-service
+        url: /v3/api-docs/payment-service
+      - name: notification-service
+        url: /v3/api-docs/notification-service
+      - name: delivery-service
+        url: /v3/api-docs/delivery-service
+      - name: review-service
+        url: /v3/api-docs/review-service
 
 # JWT configuration
 jwt:

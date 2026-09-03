@@ -1,7 +1,7 @@
 services:
   # Infrastructure Services
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.4.0
+    image: docker.io/confluentinc/cp-zookeeper:7.4.0
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -11,7 +11,7 @@ services:
       - ifood-network
 
   kafka:
-    image: confluentinc/cp-kafka:7.4.0
+    image: docker.io/confluentinc/cp-kafka:7.4.0
     depends_on:
       - zookeeper
     ports:
@@ -25,7 +25,7 @@ services:
       - ifood-network
 
   postgres:
-    image: postgres:15
+    image: docker.io/library/postgres:15
     environment:
       POSTGRES_DB: ifood_db
       POSTGRES_USER: ifood_user
@@ -43,7 +43,7 @@ services:
       - ifood-network
 
   mongodb:
-    image: mongo:7.0
+    image: docker.io/library/mongo:7.0
     environment:
       MONGO_INITDB_ROOT_USERNAME: ifood_user
       MONGO_INITDB_ROOT_PASSWORD: ifood_pass
@@ -60,7 +60,7 @@ services:
       - ifood-network
 
   redis:
-    image: redis:7.2-alpine
+    image: docker.io/library/redis:7.2-alpine
     ports:
       - "6380:6379"
     command: redis-server --appendonly yes
@@ -129,9 +129,12 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - service-discovery
-      - config-server
-      - redis
+      service-discovery:
+        condition: service_started
+      config-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: prod
       CONFIG_SERVER_URL: http://config-server:8888
@@ -139,6 +142,8 @@ services:
       # Redis Configuration - Professional Setup
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_USER: ifood_user
+      REDIS_PASSWORD: ifood_redis_pass
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       # JWT Configuration
@@ -240,6 +245,10 @@ services:
       DB_USERNAME: ifood_user
       DB_PASSWORD: ifood_pass
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
     networks:
       - ifood-network
 
@@ -266,6 +275,10 @@ services:
       DB_USERNAME: ifood_user
       DB_PASSWORD: ifood_pass
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
     networks:
       - ifood-network
 
@@ -292,6 +305,10 @@ services:
       DB_USERNAME: ifood_user
       DB_PASSWORD: ifood_pass
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
     networks:
       - ifood-network
 
@@ -318,6 +335,10 @@ services:
       DB_USERNAME: ifood_user
       DB_PASSWORD: ifood_pass
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
     networks:
       - ifood-network
 
@@ -340,7 +361,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_SERVER_URL: http://service-discovery:8761
-      MONGODB_URI: mongodb://ifood_user:ifood_pass@mongodb:27017/ifood_notifications
+      MONGODB_URI: mongodb://ifood_user:ifood_pass@mongodb:27017/ifood_notifications?authSource=admin
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     networks:
       - ifood-network
@@ -372,6 +393,10 @@ services:
       DB_USERNAME: ifood_user
       DB_PASSWORD: ifood_pass
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
     networks:
       - ifood-network
 
@@ -394,8 +419,12 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_SERVER_URL: http://service-discovery:8761
-      MONGODB_URI: mongodb://ifood_user:ifood_pass@mongodb:27017/ifood_reviews
+      MONGODB_URI: mongodb://ifood_user:ifood_pass@mongodb:27017/ifood_reviews?authSource=admin
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    labels:
+      - "logging=promtail"
+    volumes:
+      - ./logs:/app/logs
     networks:
       - ifood-network
 

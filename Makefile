@@ -55,6 +55,9 @@ help: ## Show this help message
 	@echo "$(GREEN)🐳 Container Management:$(NC)"
 	@awk '/^[a-zA-Z_-]+.*:.*##/ && /docker-/ && !/docker-build/ { printf "  $(YELLOW)%-25s$(NC) %s\n", $$1, substr($$0, index($$0, "## ") + 3) }' $(MAKEFILE_LIST)
 	@echo ""
+	@echo "$(GREEN)🚢 Argo CD GitOps (local, via Podman):$(NC)"
+	@awk '/^[a-zA-Z_-]+.*:.*##/ && /gitops-/ { printf "  $(YELLOW)%-25s$(NC) %s\n", $$1, substr($$0, index($$0, "## ") + 3) }' $(MAKEFILE_LIST)
+	@echo ""
 	@echo "$(BLUE)📋 Service Groups:$(NC)"
 	@echo "  $(CYAN)Infrastructure Core:$(NC) $(INFRA_CORE_SERVICES)"
 	@echo "  $(CYAN)Business Core:$(NC)      $(BUSINESS_CORE_SERVICES)"
@@ -734,10 +737,43 @@ fix-dockerfiles: ## Fix all Dockerfiles to use standalone pom.docker.xml
 	done
 	@echo "$(GREEN)✅ All Dockerfiles fixed!$(NC)"
 
-# Default target
-.DEFAULT_GOAL := help
+# ==========================================
+# Argo CD GitOps (local cluster via Podman + Minikube)
+# ==========================================
 
+.PHONY: gitops-cluster-up
+gitops-cluster-up: ## Start the local Minikube cluster (driver=podman)
+	@./scripts/gitops/cluster-up.sh
 
+.PHONY: gitops-argocd-install
+gitops-argocd-install: ## Install Argo CD into the local cluster
+	@./scripts/gitops/install-argocd.sh
+
+.PHONY: gitops-helm-deps
+gitops-helm-deps: ## Resolve Helm chart deps for gitops/apps/{infra,observability} (Chart.lock)
+	@./scripts/gitops/helm-deps.sh
+
+.PHONY: gitops-build-images
+gitops-build-images: ## (offline/dev only) Build all 12 microservice images with Podman, tagged :local
+	@./scripts/gitops/build-images.sh
+
+.PHONY: gitops-load-images
+gitops-load-images: ## (offline/dev only) Load the :local images built above into Minikube
+	@./scripts/gitops/load-images.sh
+
+.PHONY: gitops-bootstrap
+gitops-bootstrap: ## Apply the Argo CD app-of-apps (infra + observability + services)
+	@kubectl apply -f gitops/argocd/root-app.yaml
+
+.PHONY: gitops-up
+gitops-up: gitops-cluster-up gitops-argocd-install gitops-helm-deps gitops-bootstrap ## Full local GitOps bootstrap end-to-end (pulls images from ghcr.io, built by CI)
+	@echo "$(GREEN)🎉 Argo CD GitOps environment bootstrapped!$(NC)"
+	@echo "$(CYAN)Port-forward the Argo CD UI:$(NC) kubectl -n argocd port-forward svc/argocd-server 8080:443"
+	@echo "$(YELLOW)Note:$(NC) services pull images from ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/<service>,"
+	@echo "      built by .github/workflows/ci-cd.yml on every push to main. If this is the first run and"
+	@echo "      CI hasn't pushed yet (or the ghcr packages are still private), pods will fail to pull the"
+	@echo "      image - either wait for CI, make the packages public, or use 'make gitops-build-images"
+	@echo "      gitops-load-images' + '--set image.repository=... --set image.tag=local' for an offline run."
 
 # Default target
 .DEFAULT_GOAL := help

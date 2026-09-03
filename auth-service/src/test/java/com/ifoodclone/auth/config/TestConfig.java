@@ -9,6 +9,9 @@ import org.mockito.Mockito;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.security.core.userdetails.UserDetailsService;
+
+import com.ifoodclone.auth.service.JwtService;
 
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.Span;
@@ -40,6 +43,7 @@ public class TestConfig {
         when(span.makeCurrent()).thenReturn(scope);
         when(span.addEvent(anyString())).thenReturn(span);
         when(span.addEvent(anyString(), any(java.time.Instant.class))).thenReturn(span);
+        when(span.recordException(any(Throwable.class))).thenReturn(span);
         when(span.setAttribute(anyString(), anyString())).thenReturn(span);
         when(span.setAttribute(anyString(), any(Long.class))).thenReturn(span);
         when(span.setAttribute(anyString(), any(Boolean.class))).thenReturn(span);
@@ -54,5 +58,28 @@ public class TestConfig {
     @Primary
     public Tracer tracer() {
         return Mockito.mock(Tracer.class);
+    }
+
+    // CorrelationIdInterceptor (registered for every request, including in @WebMvcTest
+    // slices) depends on io.micrometer.tracing.Tracer - a different type from the
+    // io.opentelemetry.api.trace.Tracer mocked above, and not provided by the web slice.
+    @Bean
+    @Primary
+    public io.micrometer.tracing.Tracer micrometerTracer() {
+        return Mockito.mock(io.micrometer.tracing.Tracer.class);
+    }
+
+    // JwtAuthenticationFilter is a @Component Filter, also auto-detected by @WebMvcTest
+    // slices regardless of the controller under test - its constructor deps need mocks too.
+    @Bean
+    @Primary
+    public JwtService jwtService() {
+        return Mockito.mock(JwtService.class);
+    }
+
+    @Bean
+    @Primary
+    public UserDetailsService userDetailsService() {
+        return Mockito.mock(UserDetailsService.class);
     }
 }

@@ -1,0 +1,16 @@
+nameOverride: service-discovery
+
+image:
+  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/service-discovery
+  tag: e0f17e408756259c48829a840e34c4254c766404
+
+service:
+  port: 8761
+  targetPort: 8761
+
+probes:
+  path: /actuator/health
+  initialDelaySeconds: 30
+
+serviceDiscovery:
+  enabled: false
