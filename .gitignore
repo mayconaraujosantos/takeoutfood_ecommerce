@@ -184,7 +184,7 @@ zipkin/
 k8s-secrets/
 
 # Helm
-charts/*.tgz
+**/charts/*.tgz
 
 # ========== BUILD TOOLS ==========
 # npm (if using Node.js for frontend)
