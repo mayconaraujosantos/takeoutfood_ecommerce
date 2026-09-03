@@ -3,7 +3,7 @@ springProfile: dev
 
 image:
   repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/auth-service
-  tag: main
+  tag: e0f17e408756259c48829a840e34c4254c766404
 
 service:
   port: 8081
