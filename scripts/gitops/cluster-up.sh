@@ -3,8 +3,13 @@
 set -euo pipefail
 
 CLUSTER_NAME="${MINIKUBE_PROFILE:-ifood-clone}"
-CPUS="${MINIKUBE_CPUS:-4}"
-MEMORY="${MINIKUBE_MEMORY:-8192}"
+CPUS="${MINIKUBE_CPUS:-8}"
+# 8GB wasn't enough headroom for all 12 Spring Boot services plus infra
+# (postgres/mongo/redis/kafka) and observability at once - the cgroup filled
+# up and container creation started failing with "resource temporarily
+# unavailable". Bump the default; override with MINIKUBE_MEMORY if your host
+# has less to spare.
+MEMORY="${MINIKUBE_MEMORY:-16384}"
 
 command -v podman >/dev/null 2>&1 || { echo "podman not found in PATH" >&2; exit 1; }
 command -v minikube >/dev/null 2>&1 || { echo "minikube not found in PATH - install it first: https://minikube.sigs.k8s.io/docs/start/" >&2; exit 1; }
