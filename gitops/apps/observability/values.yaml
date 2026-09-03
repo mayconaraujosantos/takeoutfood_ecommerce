@@ -67,6 +67,20 @@ loki:
       limits:
         memory: 512Mi
         cpu: 250m
+  # Self-monitoring tries to install the Grafana Agent Operator and its CRDs by default,
+  # which we don't use (metrics/logs already flow through kube-prometheus-stack + promtail).
+  # Left enabled it renders a GrafanaAgent CR with no matching CRD, and duplicates the
+  # podmonitors/probes/servicemonitors CRDs that kube-prometheus-stack already installs.
+  monitoring:
+    selfMonitoring:
+      enabled: false
+      grafanaAgent:
+        installOperator: false
+    lokiCanary:
+      enabled: false
+  # Depends on selfMonitoring + lokiCanary, both disabled above.
+  test:
+    enabled: false
   # These distributed-mode components are unused in SingleBinary deployment mode.
   read:
     replicas: 0
