@@ -77,7 +77,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/test/**", "/api/tracing/**").permitAll()
 
                         // Swagger/OpenAPI (ambiente de desenvolvimento)
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
+                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
 
                         // Admin endpoints - Profissional API v1
                         .requestMatchers("/api/v1/auth/admin/**").hasRole("ADMIN")
