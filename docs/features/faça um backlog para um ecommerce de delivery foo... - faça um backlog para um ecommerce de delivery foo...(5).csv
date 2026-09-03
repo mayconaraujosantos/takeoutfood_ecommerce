@@ -1,0 +1,5 @@
+Prioridade,História de Usuário/Tarefa Técnica,Microsserviço Principal/Componente
+Média,"HU: Como Cliente, eu quero avaliar e dar nota para o Restaurante e para o Entregador após a entrega.","review-service, order-service"
+Média,"HU: Como Cliente, eu quero visualizar meu histórico de pedidos e repetir um pedido anterior.","order-service, menu-service"
+Baixa,Tarefa Técnica: Configurar métricas e dashboards de Observabilidade (ex: Prometheus/Grafana) para monitorar a saúde dos microsserviços em tempo real.,"observability, docker-compose.observability.yml"
+Baixa,Tarefa Técnica: Refatorar a criação do ambiente de desenvolvimento usando docker-compose.yml para subir os serviços locais de forma simples.,"docker-compose.yml, Makefile"

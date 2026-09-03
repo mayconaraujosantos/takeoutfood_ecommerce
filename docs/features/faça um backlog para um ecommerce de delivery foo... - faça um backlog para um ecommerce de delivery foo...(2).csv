@@ -1,0 +1,7 @@
+Prioridade,História de Usuário/Tarefa Técnica,Microsserviço Principal/Componente
+Alta,"HU: Como Cliente, eu quero adicionar itens ao meu carrinho e ajustá-los (quantidade, observações).",order-service
+Alta,"HU: Como Cliente, eu quero finalizar a compra, informando o endereço de entrega e a forma de pagamento.","order-service, user-service"
+Alta,"HU: Como Cliente, eu quero pagar meu pedido de forma segura (ex: Cartão de Crédito/Pix).","payment-service, order-service"
+Alta,Tarefa Técnica: Implementar a comunicação por eventos (ex: Kafka) entre order-service e payment-service para notificar sobre o pagamento.,"order-service, payment-service"
+Média,"HU: Como Restaurante, eu quero receber e confirmar novos pedidos para começar o preparo.","order-service, notification-service"
+Média,"HU: Como Cliente, eu quero receber uma notificação (push ou email) sobre o status do meu pedido.","notification-service, order-service"

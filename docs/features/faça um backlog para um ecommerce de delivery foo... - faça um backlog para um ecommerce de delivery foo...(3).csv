@@ -1,0 +1,5 @@
+Prioridade,História de Usuário/Tarefa Técnica,Microsserviço Principal/Componente
+Alta,"HU: Como Cliente, eu quero rastrear a localização do Entregador e ver o tempo estimado de chegada.",delivery-service
+Alta,"HU: Como Entregador, eu quero receber, aceitar e gerenciar a rota de entrega de um pedido.","delivery-service, order-service, notification-service"
+Média,"HU: Como Restaurante, eu quero sinalizar que o pedido está pronto para retirada pelo entregador.","order-service, delivery-service"
+Média,Tarefa Técnica: Implementar a comunicação em tempo real (ex: WebSockets) para atualização de localização no app do Cliente e Entregador.,delivery-service

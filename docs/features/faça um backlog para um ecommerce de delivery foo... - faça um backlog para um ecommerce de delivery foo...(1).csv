@@ -1,0 +1,6 @@
+Prioridade,História de Usuário/Tarefa Técnica,Microsserviço Principal/Componente
+Alta,"HU: Como Cliente, eu quero buscar e filtrar Restaurantes por nome, culinária e proximidade.","restaurant-service, api-gateway"
+Alta,"HU: Como Cliente, eu quero ver o Cardápio completo de um restaurante, incluindo itens, preços e descrições.","menu-service, restaurant-service"
+Alta,"HU: Como Restaurante, eu quero cadastrar, editar e remover itens do meu cardápio.","menu-service, restaurant-service"
+Média,"HU: Como Cliente, eu quero ver avaliações e a nota média do restaurante antes de fazer um pedido.","restaurant-service, review-service"
+Média,Tarefa Técnica: Adicionar funcionalidade de cache (ex: Redis) para dados de menu e restaurantes mais acessados para alta performance.,"menu-service, restaurant-service"
