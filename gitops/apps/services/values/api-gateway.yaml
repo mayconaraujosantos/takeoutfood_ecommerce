@@ -9,9 +9,9 @@ service:
   targetPort: 8080
 
 env:
-  REDIS_HOST: redis
+  REDIS_HOST: redis-master
   REDIS_PORT: "6379"
   REDIS_USER: ifood_user
   REDIS_PASSWORD: ifood_redis_pass
-  SPRING_DATA_REDIS_HOST: redis
+  SPRING_DATA_REDIS_HOST: redis-master
   SPRING_DATA_REDIS_PORT: "6379"
