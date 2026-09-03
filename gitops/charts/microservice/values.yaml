@@ -51,7 +51,7 @@ envFrom: []
 serviceDiscovery:
   enabled: true
   configServerUrl: "http://config-server:8888"
-  eurekaServerUrl: "http://service-discovery:8761/eureka/"
+  eurekaServerUrl: "http://service-discovery:8761"
 
 tracing:
   enabled: true
