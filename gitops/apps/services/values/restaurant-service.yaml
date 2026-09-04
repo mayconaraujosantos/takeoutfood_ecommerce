@@ -2,7 +2,7 @@ nameOverride: restaurant-service
 
 image:
   repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/restaurant-service
-  tag: 7e3eb4ccc2f76cb1e8a685977e04b25206435d7c
+  tag: 90efa3c258a128dcf9c387eae6b36aa344b3a147
 
 service:
   port: 8083
