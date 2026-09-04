@@ -21,3 +21,7 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      # kube-prometheus-stack's CRDs (Prometheus, Alertmanager, ThanosRuler, PrometheusAgent)
+      # exceed the 262144-byte kubectl.kubernetes.io/last-applied-configuration annotation
+      # limit under client-side apply; server-side apply avoids that annotation entirely.
+      - ServerSideApply=true

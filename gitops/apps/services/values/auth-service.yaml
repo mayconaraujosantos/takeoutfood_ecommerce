@@ -3,13 +3,15 @@ springProfile: dev
 
 image:
   repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/auth-service
-  tag: e0f17e408756259c48829a840e34c4254c766404
+  tag: 7e3eb4ccc2f76cb1e8a685977e04b25206435d7c
 
 service:
   port: 8081
   targetPort: 8081
 
 env:
+  # Must match api-gateway's JWT_SECRET exactly -- see comment there.
+  JWT_SECRET: YWxsYW5lc3BlcmF2YW1vc3F1ZXNlamlhZm9yZXRlc29tcGVzc29hbHZhcnJhem9hYmVsZGFzaXZh
   DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
   DB_HOST: postgres
   DB_PORT: "5432"

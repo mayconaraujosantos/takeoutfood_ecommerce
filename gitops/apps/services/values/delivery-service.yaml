@@ -2,7 +2,7 @@ nameOverride: delivery-service
 
 image:
   repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/delivery-service
-  tag: e0f17e408756259c48829a840e34c4254c766404
+  tag: 7e3eb4ccc2f76cb1e8a685977e04b25206435d7c
 
 service:
   port: 8088

@@ -1,7 +1,5 @@
 package com.ifoodclone.gateway.filter;
 
-import java.nio.charset.StandardCharsets;
-
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -25,7 +23,7 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> {
 
-    @Value("${app.jwt.secret:${JWT_SECRET:}}")
+    @Value("${jwt.secret}")
     private String jwtSecret;
 
     public AuthFilter() {
@@ -94,17 +92,18 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
 
     private Mono<Void> validateAndProcessToken(ServerWebExchange exchange,
             org.springframework.cloud.gateway.filter.GatewayFilterChain chain,
-            String token, String requestPath) {
+            String token,
+            String requestPath) {
         try {
             if (!isValidToken(token)) {
+                log.warn("Invalid token for path: {}", requestPath);
                 return onError(exchange, "Invalid token", HttpStatus.UNAUTHORIZED);
             }
 
             Claims claims = getClaims(token);
-            ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
-                    .header("X-User-Id", claims.getSubject())
-                    .header("X-User-Role", claims.get("role", String.class))
-                    .build();
+            ServerHttpRequest modifiedRequest = buildAuthenticatedRequest(exchange.getRequest(), claims, requestPath);
+
+            log.debug("User authenticated: userId={}, path={}", claims.getSubject(), requestPath);
 
             return chain.filter(exchange.mutate().request(modifiedRequest).build());
 
@@ -114,14 +113,33 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
         }
     }
 
+    private ServerHttpRequest buildAuthenticatedRequest(ServerHttpRequest request, Claims claims, String requestPath) {
+        String userId = claims.getSubject();
+        String email = claims.get("email", String.class);
+        String roles = claims.get("roles", String.class);
+        String authorities = claims.get("authorities", String.class);
+
+        return request.mutate()
+                .header("X-User-Id", userId != null ? userId : "")
+                .header("X-User-Email", email != null ? email : "")
+                .header("X-User-Roles", roles != null ? roles : "")
+                .header("X-User-Authorities", authorities != null ? authorities : "")
+                .header("X-Authenticated", "true")
+                .header("X-Request-Path", requestPath)
+                .build();
+    }
+
     private boolean isValidToken(String token) {
         try {
-            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
-            Jwts.parser()
+            SecretKey key = getSignKey();
+            Claims claims = Jwts.parser()
                     .verifyWith(key)
                     .build()
-                    .parseSignedClaims(token);
-            return true;
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            // Check if token is expired
+            return claims.getExpiration() != null && claims.getExpiration().after(new java.util.Date());
         } catch (Exception e) {
             log.debug("Token validation failed: {}", e.getMessage());
             return false;
@@ -129,19 +147,21 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
     }
 
     private Claims getClaims(String token) {
-        byte[] keyBytes;
-        try {
-            keyBytes = Decoders.BASE64.decode(jwtSecret);
-        } catch (Exception ex) {
-            keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
-        }
-
-        SecretKey key = Keys.hmacShaKeyFor(keyBytes);
+        SecretKey key = getSignKey();
         return Jwts.parser()
                 .verifyWith(key)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    // Matches auth-service's JwtService#getSignKey exactly -- jwt.secret is base64-encoded
+    // key material, not a literal passphrase. Using raw UTF-8 bytes here (as this used to)
+    // derives a different key than auth-service signs with, so every valid token fails
+    // signature verification at the gateway.
+    private SecretKey getSignKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     private Mono<Void> onError(ServerWebExchange exchange, String message, HttpStatus status) {

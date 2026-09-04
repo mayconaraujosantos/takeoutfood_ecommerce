@@ -31,6 +31,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ServerWebExchange;
 
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import reactor.core.publisher.Mono;
 
@@ -60,10 +61,10 @@ class AuthFilterTest {
     private AuthFilter authFilter;
     private AuthFilter.Config config;
 
-    // Use a proper 256-bit key for testing
-    // Use a direct string secret that matches what AuthFilter expects (converted to
-    // bytes)
-    private static final String TEST_SECRET = "testSecretKeyForJWTTestingPurposesWithMinimum256BitsLengthForJWTHMACASHA256testSecretKey";
+    // AuthFilter base64-decodes jwt.secret before deriving the HMAC key (matches
+    // auth-service's JwtService), so this must be valid base64, not a literal passphrase.
+    // Decodes to 54 bytes (432 bits), comfortably above HS384's 48-byte minimum.
+    private static final String TEST_SECRET = "YWxsYW5lc3BlcmF2YW1vc3F1ZXNlamlhZm9yZXRlc29tcGVzc29hbHZhcnJhem9hYmVsZGFzaXZh";
     private String validToken;
     private String expiredToken;
     private String invalidToken;
@@ -120,7 +121,7 @@ class AuthFilterTest {
     }
 
     private void generateTestTokens() {
-        SecretKey key = Keys.hmacShaKeyFor(TEST_SECRET.getBytes(StandardCharsets.UTF_8));
+        SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(TEST_SECRET));
 
         // Valid token
         validToken = Jwts.builder()
@@ -182,7 +183,7 @@ class AuthFilterTest {
         @DisplayName("Should handle missing optional claims gracefully")
         void shouldHandleMissingOptionalClaimsGracefully() {
             // Given
-            SecretKey key = Keys.hmacShaKeyFor(TEST_SECRET.getBytes(StandardCharsets.UTF_8));
+            SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(TEST_SECRET));
             String minimalToken = Jwts.builder()
                     .subject("456")
                     .issuedAt(new Date())
@@ -214,7 +215,7 @@ class AuthFilterTest {
         @DisplayName("Should extract all user context information")
         void shouldExtractAllUserContextInformation() {
             // Given
-            SecretKey key = Keys.hmacShaKeyFor(TEST_SECRET.getBytes(StandardCharsets.UTF_8));
+            SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(TEST_SECRET));
             String fullToken = Jwts.builder()
                     .subject("789")
                     .claim("email", "admin@example.com")
@@ -414,7 +415,7 @@ class AuthFilterTest {
         @DisplayName("Should validate token expiration correctly")
         void shouldValidateTokenExpirationCorrectly() {
             // Given
-            SecretKey key = Keys.hmacShaKeyFor(TEST_SECRET.getBytes(StandardCharsets.UTF_8));
+            SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(TEST_SECRET));
 
             // Token that expires in 5 seconds
             String soonToExpireToken = Jwts.builder()
@@ -443,7 +444,7 @@ class AuthFilterTest {
         @DisplayName("Should validate token without expiration claim")
         void shouldValidateTokenWithoutExpirationClaim() {
             // Given
-            SecretKey key = Keys.hmacShaKeyFor(TEST_SECRET.getBytes(StandardCharsets.UTF_8));
+            SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(TEST_SECRET));
 
             String noExpirationToken = Jwts.builder()
                     .subject("123")
