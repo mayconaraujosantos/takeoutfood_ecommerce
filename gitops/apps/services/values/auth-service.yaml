@@ -10,6 +10,8 @@ service:
   targetPort: 8081
 
 env:
+  # Must match api-gateway's JWT_SECRET exactly -- see comment there.
+  JWT_SECRET: YWxsYW5lc3BlcmF2YW1vc3F1ZXNlamlhZm9yZXRlc29tcGVzc29hbHZhcnJhem9hYmVsZGFzaXZh
   DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
   DB_HOST: postgres
   DB_PORT: "5432"

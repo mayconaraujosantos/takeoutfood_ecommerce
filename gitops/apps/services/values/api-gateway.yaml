@@ -9,6 +9,10 @@ service:
   targetPort: 8080
 
 env:
+  # Must match auth-service's JWT_SECRET exactly -- the gateway's AuthFilter validates
+  # tokens auth-service issues, and with no shared secret each service falls back to its
+  # own different default, so every token fails signature validation at the gateway.
+  JWT_SECRET: YWxsYW5lc3BlcmF2YW1vc3F1ZXNlamlhZm9yZXRlc29tcGVzc29hbHZhcnJhem9hYmVsZGFzaXZh
   REDIS_HOST: redis-master
   REDIS_PORT: "6379"
   REDIS_USER: ifood_user
