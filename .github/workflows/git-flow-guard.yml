@@ -1,0 +1,19 @@
+name: Git Flow Guard
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  enforce-source-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Only allow release/* or hotfix/* into main
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [[ "$HEAD_REF" != release/* && "$HEAD_REF" != hotfix/* ]]; then
+            echo "::error::main só aceita merge de branches 'release/*' ou 'hotfix/*' (Git Flow). Branch atual: '$HEAD_REF'. Veja docs/GIT_FLOW.md."
+            exit 1
+          fi
+          echo "OK: '$HEAD_REF' segue a convenção do Git Flow."
