@@ -1,7 +1,5 @@
 package com.ifoodclone.gateway.filter;
 
-import java.nio.charset.StandardCharsets;
-
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +14,7 @@ import org.springframework.web.server.ServerWebExchange;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
@@ -132,7 +131,7 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
 
     private boolean isValidToken(String token) {
         try {
-            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+            SecretKey key = getSignKey();
             Claims claims = Jwts.parser()
                     .verifyWith(key)
                     .build()
@@ -148,12 +147,21 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
     }
 
     private Claims getClaims(String token) {
-        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        SecretKey key = getSignKey();
         return Jwts.parser()
                 .verifyWith(key)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    // Matches auth-service's JwtService#getSignKey exactly -- jwt.secret is base64-encoded
+    // key material, not a literal passphrase. Using raw UTF-8 bytes here (as this used to)
+    // derives a different key than auth-service signs with, so every valid token fails
+    // signature verification at the gateway.
+    private SecretKey getSignKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     private Mono<Void> onError(ServerWebExchange exchange, String message, HttpStatus status) {
