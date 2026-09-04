@@ -2,7 +2,7 @@ nameOverride: review-service
 
 image:
   repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/review-service
-  tag: c9ad489035a777c6a7eaa8c0051bbd75088fc5d9
+  tag: 7e3eb4ccc2f76cb1e8a685977e04b25206435d7c
 
 service:
   port: 8089
