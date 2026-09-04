@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.core.userdetails.UserDetailsService;
 
+import com.ifoodclone.auth.entity.User;
 import com.ifoodclone.auth.service.JwtService;
 
 import io.opentelemetry.api.OpenTelemetry;
@@ -77,9 +78,26 @@ public class TestConfig {
         return Mockito.mock(JwtService.class);
     }
 
+    // Pre-stubbed at bean-creation time, not left for each test's @BeforeEach: Spring
+    // Security's @WithUserDetails resolves its SecurityContext via a
+    // TestExecutionListener that runs before JUnit's @BeforeEach callbacks (documented
+    // Spring Security caveat), so a mock stubbed only in @BeforeEach can still be
+    // "unstubbed" (returns null) at the moment @WithUserDetails needs it -- this raced
+    // reliably on GitHub Actions' runner but not always locally, hence the intermittent
+    // "Unable to create SecurityContext" failures in AuthControllerTest's
+    // @WithUserDetails("test@example.com") tests.
     @Bean
     @Primary
     public UserDetailsService userDetailsService() {
-        return Mockito.mock(UserDetailsService.class);
+        UserDetailsService mockUserDetailsService = Mockito.mock(UserDetailsService.class);
+        User defaultTestUser = User.builder()
+                .id(1L)
+                .email("test@example.com")
+                .password("encoded-password")
+                .role(User.UserRole.CUSTOMER)
+                .active(true)
+                .build();
+        when(mockUserDetailsService.loadUserByUsername(anyString())).thenReturn(defaultTestUser);
+        return mockUserDetailsService;
     }
 }
