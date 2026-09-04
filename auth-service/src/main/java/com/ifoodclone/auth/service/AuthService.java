@@ -1,12 +1,16 @@
 package com.ifoodclone.auth.service;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import com.ifoodclone.auth.dto.AuthDto;
 import com.ifoodclone.auth.entity.RefreshToken;
 import com.ifoodclone.auth.entity.User;
+import com.ifoodclone.auth.entity.VerificationToken;
+import com.ifoodclone.auth.entity.VerificationToken.TokenType;
 import com.ifoodclone.auth.repository.RefreshTokenRepository;
 import com.ifoodclone.auth.repository.UserRepository;
+import com.ifoodclone.auth.repository.VerificationTokenRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +43,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final VerificationTokenRepository verificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final CustomUserDetailsService userDetailsService;
 
@@ -52,6 +57,7 @@ public class AuthService {
             JwtService jwtService,
             UserRepository userRepository,
             RefreshTokenRepository refreshTokenRepository,
+            VerificationTokenRepository verificationTokenRepository,
             PasswordEncoder passwordEncoder,
             CustomUserDetailsService userDetailsService,
             OpenTelemetry openTelemetry) {
@@ -59,6 +65,7 @@ public class AuthService {
         this.jwtService = jwtService;
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.verificationTokenRepository = verificationTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.userDetailsService = userDetailsService;
         this.tracer = openTelemetry.getTracer(SERVICE_NAME, SERVICE_VERSION);
@@ -226,6 +233,8 @@ public class AuthService {
         logger.info("Usuário registrado com sucesso - ID: {}, Email: {}, UserType: {}",
                 user.getId(), user.getEmail(), user.getRole());
 
+        issueVerificationToken(user, TokenType.EMAIL_VERIFICATION, 24 * 60);
+
         return buildUserInfo(user);
     }
 
@@ -312,6 +321,76 @@ public class AuthService {
 
         // Revogar todos os tokens do usuário
         refreshTokenRepository.revokeAllUserTokens(user, LocalDateTime.now());
+    }
+
+    /**
+     * Solicitar reset de senha
+     */
+    public void requestPasswordReset(String email) {
+        // Não revela se o email existe ou não (proteção contra user enumeration) --
+        // o controller sempre responde a mesma mensagem de sucesso independentemente
+        // do resultado deste método.
+        userRepository.findByEmail(email).ifPresentOrElse(
+                user -> issueVerificationToken(user, TokenType.PASSWORD_RESET, 60),
+                () -> logger.debug("Reset de senha solicitado para email não cadastrado: {}", email));
+    }
+
+    /**
+     * Confirmar reset de senha
+     */
+    public void confirmPasswordReset(String token, String newPassword) {
+        VerificationToken verificationToken = verificationTokenRepository
+                .findByTokenAndType(token, TokenType.PASSWORD_RESET)
+                .orElseThrow(() -> new RuntimeException("Token inválido"));
+
+        if (!verificationToken.isValid()) {
+            throw new RuntimeException("Token expirado ou já utilizado");
+        }
+
+        User user = verificationToken.getUser();
+        userRepository.updatePassword(user.getId(), passwordEncoder.encode(newPassword), LocalDateTime.now());
+
+        verificationToken.markAsUsed();
+        verificationTokenRepository.save(verificationToken);
+
+        refreshTokenRepository.revokeAllUserTokens(user, LocalDateTime.now());
+    }
+
+    /**
+     * Verificar email
+     */
+    public void verifyEmail(String token) {
+        VerificationToken verificationToken = verificationTokenRepository
+                .findByTokenAndType(token, TokenType.EMAIL_VERIFICATION)
+                .orElseThrow(() -> new RuntimeException("Token inválido"));
+
+        if (!verificationToken.isValid()) {
+            throw new RuntimeException("Token expirado ou já utilizado");
+        }
+
+        userRepository.verifyEmail(verificationToken.getUser().getId(), LocalDateTime.now());
+
+        verificationToken.markAsUsed();
+        verificationTokenRepository.save(verificationToken);
+    }
+
+    // Não há provedor de email real configurado no projeto (sem spring-boot-starter-mail,
+    // sem credenciais SMTP) -- mesmo precedente de payment-service simulando um gateway
+    // externo (PaymentService.decideStatus): o "envio" é simulado via log, contendo o
+    // token/link que um provedor de email real enviaria para o usuário.
+    private void issueVerificationToken(User user, TokenType type, long expirationMinutes) {
+        VerificationToken verificationToken = VerificationToken.builder()
+                .token(UUID.randomUUID().toString())
+                .user(user)
+                .type(type)
+                .expiresAt(LocalDateTime.now().plusMinutes(expirationMinutes))
+                .build();
+
+        verificationToken = verificationTokenRepository.save(verificationToken);
+
+        String action = type == TokenType.PASSWORD_RESET ? "password/reset/confirm" : "email/verify";
+        logger.info("[SIMULADO] Email de {} enviado para {} -- link: /api/v1/auth/{}?token={}",
+                type, user.getEmail(), action, verificationToken.getToken());
     }
 
     /**

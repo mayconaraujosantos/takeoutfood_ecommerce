@@ -262,7 +262,7 @@ public class AuthController {
             @Valid @RequestBody AuthDto.PasswordResetRequest request) {
 
         try {
-            // TODO: Implementar serviço de reset de senha
+            authService.requestPasswordReset(request.getEmail());
             return ResponseEntity.ok(
                     AuthDto.ApiResponse.success("Email de reset de senha enviado", null));
         } catch (Exception ex) {
@@ -279,7 +279,7 @@ public class AuthController {
             @Valid @RequestBody AuthDto.PasswordResetConfirmRequest request) {
 
         try {
-            // TODO: Implementar confirmação de reset de senha
+            authService.confirmPasswordReset(request.getToken(), request.getNewPassword());
             return ResponseEntity.ok(
                     AuthDto.ApiResponse.success("Senha alterada com sucesso", null));
         } catch (Exception ex) {
@@ -296,7 +296,7 @@ public class AuthController {
             @Valid @RequestBody AuthDto.EmailVerificationRequest request) {
 
         try {
-            // TODO: Implementar verificação de email
+            authService.verifyEmail(request.getToken());
             return ResponseEntity.ok(
                     AuthDto.ApiResponse.success("Email verificado com sucesso", null));
         } catch (Exception ex) {

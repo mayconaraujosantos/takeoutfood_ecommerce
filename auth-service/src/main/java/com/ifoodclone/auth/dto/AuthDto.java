@@ -9,8 +9,10 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 public class AuthDto {
 
@@ -120,8 +122,15 @@ public class AuthDto {
         private LocalDateTime expiresAt;
     }
 
+    // Explicit @NoArgsConstructor/@AllArgsConstructor: a single-field @Data @Builder
+    // class has no public constructor Jackson can auto-detect (a single-arg constructor
+    // is ambiguous between delegating- and properties-based creation, so it's never
+    // implicitly used) -- without these, a POST body with only {"email": "..."} fails to
+    // deserialize at runtime with "no delegate- or property-based Creator".
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class PasswordResetRequest {
         @NotBlank(message = "Email é obrigatório")
         @Email(message = "Formato de email inválido")
@@ -150,8 +159,11 @@ public class AuthDto {
         private String newPassword;
     }
 
+    // Same single-field constructor gotcha as PasswordResetRequest above.
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class EmailVerificationRequest {
         @NotBlank(message = "Token é obrigatório")
         private String token;
