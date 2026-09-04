@@ -89,6 +89,10 @@ public class Order {
         CONFIRMED,
         PAYMENT_FAILED,
         PREPARING,
+        // Set only by DeliveryEventListener reacting to delivery-service's "delivery-events"
+        // topic -- not a valid target for the restaurant-facing PATCH /status endpoint.
+        OUT_FOR_DELIVERY,
+        DELIVERED,
         CANCELLED
     }
 
