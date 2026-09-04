@@ -1,0 +1,43 @@
+meta {
+  name: Register Delivery Driver
+  type: http
+  seq: 17
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/register
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "driver@example.com",
+    "password": "password123",
+    "firstName": "Carlos",
+    "lastName": "Lima",
+    "phone": "+55 11 77777-7777",
+    "role": "DELIVERY_DRIVER"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    console.log("Delivery driver registered successfully with ID:", res.body.data.id);
+  }
+}
+
+tests {
+  test("Status should be 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Should return delivery driver data", function() {
+    expect(res.getBody()).to.have.property('success', true);
+    expect(res.getBody().data).to.have.property('role', 'DELIVERY_DRIVER');
+  });
+}

@@ -199,14 +199,19 @@ public class AuthService {
 
         logger.debug("Email disponível para registro: {}", request.getEmail());
 
-        // Criar novo usuário
+        // Definir role padrão para registros públicos: sempre CUSTOMER.
+        // Ignorar role enviada pelo cliente para evitar elevação de privilégio.
+        User.UserRole role = User.UserRole.CUSTOMER;
+        logger.debug("Role definida como CUSTOMER para registro público");
+
+        // Criar novo usuário (role pública forçada para CUSTOMER)
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .phone(request.getPhone())
-                .role(request.getRole())
+                .role(role)
                 .active(true)
                 .emailVerified(false)
                 .phoneVerified(false)

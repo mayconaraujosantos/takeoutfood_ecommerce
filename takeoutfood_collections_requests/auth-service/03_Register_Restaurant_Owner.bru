@@ -1,0 +1,43 @@
+meta {
+  name: Register Restaurant Owner
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/register
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "restaurant@example.com",
+    "password": "password123",
+    "firstName": "Maria",
+    "lastName": "Santos",
+    "phone": "+55 11 88888-8888",
+    "role": "RESTAURANT_OWNER"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    console.log("Restaurant owner registered successfully with ID:", res.body.data.id);
+  }
+}
+
+tests {
+  test("Status should be 201", function() {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Should return restaurant owner data", function() {
+    expect(res.getBody()).to.have.property('success', true);
+    expect(res.getBody().data).to.have.property('role', 'RESTAURANT_OWNER');
+  });
+}

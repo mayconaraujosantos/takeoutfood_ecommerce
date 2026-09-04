@@ -1,0 +1,33 @@
+meta {
+  name: Invalid Login
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "customer@example.com",
+    "password": "wrongpassword"
+  }
+}
+
+tests {
+  test("Status should be 401", function() {
+    expect(res.getStatus()).to.equal(401);
+  });
+
+  test("Should return error message", function() {
+    expect(res.getBody()).to.have.property('success', false);
+    expect(res.getBody()).to.have.property('message', 'Falha no login');
+  });
+}

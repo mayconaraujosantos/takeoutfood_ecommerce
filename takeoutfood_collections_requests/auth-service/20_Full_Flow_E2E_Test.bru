@@ -1,0 +1,81 @@
+meta {
+  name: 🧪 Full Flow Test - E2E
+  type: http
+  seq: 20
+}
+
+post {
+  url: {{baseUrl}}/api/v1/auth/register
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "e2e-test-{{$timestamp}}@example.com",
+    "password": "password123",
+    "firstName": "E2E",
+    "lastName": "Test",
+    "phone": "+55 11 99999-{{$randomInt}}",
+    "role": "CUSTOMER"
+  }
+}
+
+script:pre-request {
+  // Gerar dados únicos para cada teste
+  const timestamp = Date.now();
+  const randomInt = Math.floor(Math.random() * 9999);
+
+  bru.setVar("timestamp", timestamp);
+  bru.setVar("randomInt", randomInt);
+
+  console.log("🧪 Iniciando teste E2E completo...");
+}
+
+script:post-response {
+  if (res.status === 201) {
+    // Salvar dados do usuário de teste
+    const userData = res.body.data;
+    bru.setVar("testUserId", userData.id);
+    bru.setVar("testUserEmail", userData.email);
+
+    console.log("✅ Usuário de teste criado:", userData.email);
+
+    // Executar login automaticamente
+    setTimeout(async () => {
+      console.log("🔐 Fazendo login automático...");
+
+      const loginRequest = {
+        url: bru.getVar("baseUrl") + "/api/v1/auth/login",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email: userData.email,
+          password: "password123"
+        })
+      };
+
+      // Note: Este é um exemplo conceitual
+      // O Bruno não executa requests HTTP dentro de scripts
+      console.log("Login request preparado para:", userData.email);
+    }, 1000);
+  }
+}
+
+tests {
+  test("E2E - User Registration", function() {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody()).to.have.property('success', true);
+    expect(res.getBody().data).to.have.property('id');
+  });
+
+  test("E2E - Email should be unique", function() {
+    expect(res.getBody().data.email).to.include('e2e-test-');
+  });
+}

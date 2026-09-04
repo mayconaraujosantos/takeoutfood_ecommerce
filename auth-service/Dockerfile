@@ -17,6 +17,10 @@ WORKDIR /app
 RUN addgroup -g 1001 -S appgroup && \
     adduser -u 1001 -S appuser -G appgroup
 
+# Create logs directory with proper permissions
+RUN mkdir -p /app/logs && \
+    chown -R appuser:appgroup /app/logs
+
 COPY --from=build /build/auth-service/target/*.jar app.jar
 
 # Change ownership to non-root user

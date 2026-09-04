@@ -126,49 +126,71 @@ main() {
         exit 1
     fi
 
-    # Check for staged changes
-    if ! check_staged_changes; then
-        echo -e "${RED}Error: No staged changes found${NC}"
-        echo -e "${YELLOW}Please stage your changes first with:${NC} git add <files>"
-        show_status
-        exit 1
-    fi
-
-    # Construct commit message
+    # Build commit message
     local commit_message="$type($scope): $description"
     
+    # Add body if provided
     if [[ -n "$body" ]]; then
         commit_message="$commit_message
 
 $body"
     fi
 
-    # Show what will be committed
-    echo -e "${BLUE}Staged Changes:${NC}"
-    git diff --cached --name-status
-    echo ""
-    
-    echo -e "${BLUE}Commit Message:${NC}"
-    echo -e "${GREEN}$commit_message${NC}"
+    # Show what we're about to do
+    echo -e "${BLUE}Preparing to commit:${NC}"
+    echo -e "${YELLOW}Type:${NC} $type"
+    echo -e "${YELLOW}Scope:${NC} $scope"
+    echo -e "${YELLOW}Description:${NC} $description"
+    if [[ -n "$body" ]]; then
+        echo -e "${YELLOW}Body:${NC} yes"
+    fi
+    echo -e "${YELLOW}Message:${NC} $commit_message"
     echo ""
 
-    # Confirm commit
-    read -p "Proceed with commit? (y/N): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        git commit -m "$commit_message"
-        echo -e "${GREEN}✅ Commit successful!${NC}"
-        
-        # Show recent commits
-        echo ""
-        echo -e "${BLUE}Recent commits:${NC}"
-        git log --oneline -5
-    else
-        echo -e "${YELLOW}Commit cancelled${NC}"
+    # Check if there are any changes
+    if git diff --quiet && git diff --cached --quiet; then
+        echo -e "${YELLOW}Warning: No changes detected${NC}"
+        exit 0
     fi
+
+    # Show current status
+    show_status
+
+    # Ask for confirmation if there are unstaged changes
+    if ! git diff --quiet; then
+        echo -e "${YELLOW}Warning: You have unstaged changes.${NC}"
+        echo -e "${YELLOW}Do you want to stage all changes? (y/n):${NC}"
+        read -r stage_all
+        
+        if [[ "$stage_all" =~ ^[Yy]$ ]]; then
+            git add .
+            echo -e "${GREEN}All changes staged${NC}"
+        else
+            echo -e "${YELLOW}Only staged changes will be committed${NC}"
+        fi
+    fi
+
+    # Check if there are staged changes
+    if git diff --cached --quiet; then
+        echo -e "${RED}Error: No staged changes to commit${NC}"
+        exit 1
+    fi
+
+    # Make the commit
+    echo -e "${BLUE}Creating commit...${NC}"
+    git commit -m "$commit_message"
+    
+    echo -e "${GREEN}✅ Commit created successfully!${NC}"
+    
+    # Show the commit
+    echo -e "${BLUE}Latest commit:${NC}"
+    git log --oneline -1
 }
 
-# Script entry point
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    main "$@"
+# Handle help argument
+if [[ $# -eq 0 ]] || [[ "$1" == "help" ]] || [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+    usage
 fi
+
+# Run main function with all arguments
+main "$@"

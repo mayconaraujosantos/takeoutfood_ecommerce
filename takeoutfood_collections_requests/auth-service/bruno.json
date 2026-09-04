@@ -1,0 +1,16 @@
+meta {
+  name: Auth Service API Collection
+  type: collection
+  version: 1.0.0
+}
+
+vars {
+  baseUrl: http://localhost:8081
+  accessToken:
+  refreshToken:
+  userId:
+}
+
+headers {
+  Content-Type: application/json
+}

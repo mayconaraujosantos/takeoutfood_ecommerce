@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.ifoodclone</groupId>
         <artifactId>ifood-clone-parent</artifactId>
-        <version>1.0.0</version>
+        <version>1.1.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -29,6 +29,13 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+        </dependency>
+
+        <!-- order-service is the only one of the 4 that calls other services
+             (restaurant-service, menu-service, payment-service) by Eureka name -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
 
         <dependency>
