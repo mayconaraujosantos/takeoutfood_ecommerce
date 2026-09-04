@@ -233,7 +233,7 @@ public class AuthService {
         logger.info("Usuário registrado com sucesso - ID: {}, Email: {}, UserType: {}",
                 user.getId(), user.getEmail(), user.getRole());
 
-        issueVerificationToken(user, TokenType.EMAIL_VERIFICATION, 24 * 60);
+        issueVerificationToken(user, TokenType.EMAIL_VERIFICATION, 24L * 60);
 
         return buildUserInfo(user);
     }
