@@ -49,3 +49,7 @@ git merge --no-ff hotfix/corrige-bug-critico
 ## Regra de ouro
 
 Nunca faça `git commit` estando em `main`. Se precisar de correção rápida em produção, abra `hotfix/*` a partir de `main` e sempre traga de volta para `develop` ao final.
+
+## Exceção automatizada: bump de tags de imagem
+
+O job `update-gitops` (`.github/workflows/ci-cd.yml`) roda após todo merge em `main` e atualiza as tags de imagem em `gitops/apps/services/values/*.yaml` para o SHA recém-buildado — é assim que o Argo CD pega o novo deploy. Como `main` é protegida, esse job não pode mais dar `git push` direto: ele abre uma PR a partir de uma branch `chore/gitops-bump-<sha>` e a mergeia sozinho. O Git Flow Guard libera especificamente esse prefixo, só para esse fim.
