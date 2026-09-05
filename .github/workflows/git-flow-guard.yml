@@ -8,12 +8,17 @@ jobs:
   enforce-source-branch:
     runs-on: ubuntu-latest
     steps:
-      - name: Only allow release/* or hotfix/* into main
+      - name: Only allow release/*, hotfix/* or the automated gitops bump into main
         env:
           HEAD_REF: ${{ github.head_ref }}
         run: |
-          if [[ "$HEAD_REF" != release/* && "$HEAD_REF" != hotfix/* ]]; then
-            echo "::error::main só aceita merge de branches 'release/*' ou 'hotfix/*' (Git Flow). Branch atual: '$HEAD_REF'. Veja docs/GIT_FLOW.md."
+          # chore/gitops-bump-* is a narrow exception for update-gitops's own automated
+          # PR (see ci-cd.yml) -- it only ever touches gitops/apps/services/values/*.yaml
+          # and can't go out as a direct push now that main is branch-protected. It is
+          # not a human merge and isn't a release or a hotfix, so it gets its own prefix
+          # rather than being mislabeled as either.
+          if [[ "$HEAD_REF" != release/* && "$HEAD_REF" != hotfix/* && "$HEAD_REF" != chore/gitops-bump-* ]]; then
+            echo "::error::main só aceita merge de branches 'release/*', 'hotfix/*' ou 'chore/gitops-bump-*' (Git Flow). Branch atual: '$HEAD_REF'. Veja docs/GIT_FLOW.md."
             exit 1
           fi
           echo "OK: '$HEAD_REF' segue a convenção do Git Flow."

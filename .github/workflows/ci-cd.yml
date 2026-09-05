@@ -83,6 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - name: Bump image tags in gitops values to this commit's SHA
@@ -91,7 +92,9 @@ jobs:
           for f in gitops/apps/services/values/*.yaml; do
             sed -i -E "s|^(  tag: ).*|\1${{ github.sha }}|" "$f"
           done
-      - name: Commit and push (Argo CD picks this up automatically)
+      - name: Commit, open PR and merge (Argo CD picks up main once merged)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -99,7 +102,30 @@ jobs:
           git add gitops/apps/services/values/*.yaml
           if git diff --cached --quiet; then
             echo "No tag changes to commit"
-          else
-            git commit -m "chore(gitops): bump service image tags to ${{ github.sha }}"
-            git push
+            exit 0
           fi
+
+          # main is branch-protected (no direct pushes) since the Git Flow Guard was
+          # added, so this can no longer just `git push` -- go through a short-lived
+          # branch + PR instead. chore/gitops-bump-* is the one prefix the guard allows
+          # in addition to release/* and hotfix/* (see docs/GIT_FLOW.md), specifically
+          # for this job.
+          branch="chore/gitops-bump-${{ github.sha }}"
+          git checkout -b "$branch"
+          git commit -m "chore(gitops): bump service image tags to ${{ github.sha }}"
+          git push origin "$branch"
+
+          gh pr create --base main --head "$branch" \
+            --title "chore(gitops): bump service image tags to ${{ github.sha }}" \
+            --body "Automated image tag bump for commit ${{ github.sha }}."
+
+          # GitHub needs a moment to compute mergeability for a brand-new PR.
+          for attempt in 1 2 3 4 5; do
+            if gh pr merge "$branch" --merge --delete-branch; then
+              exit 0
+            fi
+            echo "Merge not ready yet (attempt $attempt/5), retrying in 10s..."
+            sleep 10
+          done
+          echo "::error::Failed to merge $branch into main after 5 attempts"
+          exit 1
