@@ -19,6 +19,12 @@ spring:
   data:
     mongodb:
       uri: ${MONGODB_URI:mongodb://localhost:27017/ifood_notifications}
+  kafka:
+    consumer:
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+      # Deserializer/type-mapping for order-events and delivery-events is set up in
+      # code (see KafkaConsumerConfig) -- each topic gets its own ConsumerFactory
+      # because they carry two different JSON shapes.
 
 server:
   port: 8087

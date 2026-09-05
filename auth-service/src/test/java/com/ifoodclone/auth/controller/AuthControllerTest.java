@@ -347,6 +347,79 @@ class AuthControllerTest {
     }
 
     @Nested
+    @DisplayName("Password Reset and Email Verification")
+    class PasswordResetAndEmailVerificationTests {
+
+        // Regression coverage for a real bug: AuthDto.PasswordResetRequest and
+        // EmailVerificationRequest each have a single field, and a @Data @Builder class
+        // with no explicit constructor has no public constructor Jackson can use to
+        // deserialize a raw JSON body (only serialization, via the builder, worked before
+        // the fix) -- these tests post real JSON, unlike the builder-object round-trips
+        // above, so they actually exercise deserialization of the request body.
+
+        @Test
+        @DisplayName("POST /password/reset deserializes a single-field body and returns success")
+        void shouldRequestPasswordReset() throws Exception {
+            AuthDto.PasswordResetRequest request = AuthDto.PasswordResetRequest.builder()
+                    .email("test@example.com")
+                    .build();
+
+            mockMvc.perform(post("/api/v1/auth/password/reset")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+        }
+
+        @Test
+        @DisplayName("POST /password/reset/confirm deserializes the body and returns success")
+        void shouldConfirmPasswordReset() throws Exception {
+            AuthDto.PasswordResetConfirmRequest request = AuthDto.PasswordResetConfirmRequest.builder()
+                    .token("reset-token")
+                    .newPassword("new-password123")
+                    .build();
+
+            mockMvc.perform(post("/api/v1/auth/password/reset/confirm")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+        }
+
+        @Test
+        @DisplayName("POST /password/reset/confirm returns error for an invalid token")
+        void shouldReturnErrorForInvalidResetToken() throws Exception {
+            AuthDto.PasswordResetConfirmRequest request = AuthDto.PasswordResetConfirmRequest.builder()
+                    .token("bad-token")
+                    .newPassword("new-password123")
+                    .build();
+
+            doThrow(new RuntimeException("Token inválido"))
+                    .when(authService).confirmPasswordReset(anyString(), anyString());
+
+            mockMvc.perform(post("/api/v1/auth/password/reset/confirm")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        @Test
+        @DisplayName("POST /email/verify deserializes a single-field body and returns success")
+        void shouldVerifyEmail() throws Exception {
+            AuthDto.EmailVerificationRequest request = AuthDto.EmailVerificationRequest.builder()
+                    .token("verify-token")
+                    .build();
+
+            mockMvc.perform(post("/api/v1/auth/email/verify")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true));
+        }
+    }
+
+    @Nested
     @DisplayName("Health Check")
     class HealthCheckTests {
 

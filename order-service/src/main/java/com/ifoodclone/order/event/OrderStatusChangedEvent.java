@@ -17,6 +17,10 @@ public class OrderStatusChangedEvent {
     private Long userId;
     private Long restaurantId;
     private Order.OrderStatus status;
+    // Added so delivery-service can create a Delivery with a real destination -- it has
+    // no other way to learn this (no synchronous, authenticated call is available from a
+    // Kafka listener). Consumers that don't care (notification-service) just ignore it.
+    private String deliveryAddress;
     private LocalDateTime timestamp;
 
     public static OrderStatusChangedEvent from(Order order) {
@@ -25,6 +29,7 @@ public class OrderStatusChangedEvent {
                 .userId(order.getUserId())
                 .restaurantId(order.getRestaurantId())
                 .status(order.getStatus())
+                .deliveryAddress(order.getDeliveryAddress())
                 .timestamp(LocalDateTime.now())
                 .build();
     }

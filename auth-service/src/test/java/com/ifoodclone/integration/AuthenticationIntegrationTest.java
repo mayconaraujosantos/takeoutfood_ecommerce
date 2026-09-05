@@ -8,6 +8,7 @@ import com.ifoodclone.auth.dto.AuthDto;
 import com.ifoodclone.auth.entity.User;
 import com.ifoodclone.auth.repository.RefreshTokenRepository;
 import com.ifoodclone.auth.repository.UserRepository;
+import com.ifoodclone.auth.repository.VerificationTokenRepository;
 import com.ifoodclone.auth.service.AuthService;
 import com.ifoodclone.auth.service.JwtService;
 
@@ -74,6 +75,9 @@ class AuthenticationIntegrationTest {
     private RefreshTokenRepository refreshTokenRepository;
 
     @Autowired
+    private VerificationTokenRepository verificationTokenRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -91,6 +95,7 @@ class AuthenticationIntegrationTest {
 
         // Clean database - order is important due to foreign key constraints
         refreshTokenRepository.deleteAll();
+        verificationTokenRepository.deleteAll();
         userRepository.deleteAll();
 
         // Create test user

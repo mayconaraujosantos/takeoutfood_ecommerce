@@ -16,8 +16,11 @@ import java.util.Optional;
 import com.ifoodclone.auth.dto.AuthDto;
 import com.ifoodclone.auth.entity.RefreshToken;
 import com.ifoodclone.auth.entity.User;
+import com.ifoodclone.auth.entity.VerificationToken;
+import com.ifoodclone.auth.entity.VerificationToken.TokenType;
 import com.ifoodclone.auth.repository.RefreshTokenRepository;
 import com.ifoodclone.auth.repository.UserRepository;
+import com.ifoodclone.auth.repository.VerificationTokenRepository;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -54,6 +57,8 @@ class AuthServiceTest {
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
     @Mock
+    private VerificationTokenRepository verificationTokenRepository;
+    @Mock
     private PasswordEncoder passwordEncoder;
     @Mock
     private CustomUserDetailsService userDetailsService;
@@ -85,11 +90,18 @@ class AuthServiceTest {
         Mockito.lenient().when(span.setAttribute(anyString(), anyString())).thenReturn(span);
         Mockito.lenient().when(span.setAttribute(anyString(), any(Long.class))).thenReturn(span);
         Mockito.lenient().when(span.setAttribute(anyString(), any(Boolean.class))).thenReturn(span);
+        // register() now also issues an email-verification token; default this so
+        // nested test classes that don't care about it (login, refresh, logout, etc.)
+        // don't need their own stubbing.
+        Mockito.lenient().when(verificationTokenRepository.save(any(VerificationToken.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
         authService = new AuthService(
                 authenticationManager,
                 jwtService,
                 userRepository,
                 refreshTokenRepository,
+                verificationTokenRepository,
                 passwordEncoder,
                 userDetailsService,
                 openTelemetry);
@@ -544,6 +556,182 @@ class AuthServiceTest {
             assertThatThrownBy(() -> authService.changePassword(1L, validChangeRequest))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessage("Usuário não encontrado");
+        }
+    }
+
+    @Nested
+    @DisplayName("Password Reset Tests")
+    class PasswordResetTests {
+
+        @Test
+        @DisplayName("Should issue a reset token when email exists")
+        void shouldIssueResetTokenWhenEmailExists() {
+            when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+
+            authService.requestPasswordReset("test@example.com");
+
+            ArgumentCaptor<VerificationToken> captor = ArgumentCaptor.forClass(VerificationToken.class);
+            verify(verificationTokenRepository).save(captor.capture());
+            assertThat(captor.getValue().getType()).isEqualTo(TokenType.PASSWORD_RESET);
+            assertThat(captor.getValue().getUser()).isEqualTo(testUser);
+        }
+
+        @Test
+        @DisplayName("Should not throw and not issue a token for a non-existent email")
+        void shouldNotThrowForNonExistentEmail() {
+            when(userRepository.findByEmail("missing@example.com")).thenReturn(Optional.empty());
+
+            authService.requestPasswordReset("missing@example.com");
+
+            verify(verificationTokenRepository, never()).save(any(VerificationToken.class));
+        }
+
+        @Test
+        @DisplayName("Should confirm password reset with a valid token")
+        void shouldConfirmPasswordResetWithValidToken() {
+            VerificationToken token = VerificationToken.builder()
+                    .id(1L)
+                    .token("reset-token")
+                    .user(testUser)
+                    .type(TokenType.PASSWORD_RESET)
+                    .expiresAt(LocalDateTime.now().plusMinutes(30))
+                    .build();
+            when(verificationTokenRepository.findByTokenAndType("reset-token", TokenType.PASSWORD_RESET))
+                    .thenReturn(Optional.of(token));
+            when(passwordEncoder.encode("new-password")).thenReturn("new-encoded-password");
+
+            authService.confirmPasswordReset("reset-token", "new-password");
+
+            verify(userRepository).updatePassword(eq(1L), eq("new-encoded-password"), any(LocalDateTime.class));
+            verify(refreshTokenRepository).revokeAllUserTokens(eq(testUser), any(LocalDateTime.class));
+            assertThat(token.isUsed()).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should throw for an invalid reset token")
+        void shouldThrowForInvalidResetToken() {
+            when(verificationTokenRepository.findByTokenAndType("bad-token", TokenType.PASSWORD_RESET))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> authService.confirmPasswordReset("bad-token", "new-password"))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessage("Token inválido");
+        }
+
+        @Test
+        @DisplayName("Should throw for an expired reset token")
+        void shouldThrowForExpiredResetToken() {
+            VerificationToken token = VerificationToken.builder()
+                    .id(1L)
+                    .token("expired-token")
+                    .user(testUser)
+                    .type(TokenType.PASSWORD_RESET)
+                    .expiresAt(LocalDateTime.now().minusMinutes(1))
+                    .build();
+            when(verificationTokenRepository.findByTokenAndType("expired-token", TokenType.PASSWORD_RESET))
+                    .thenReturn(Optional.of(token));
+
+            assertThatThrownBy(() -> authService.confirmPasswordReset("expired-token", "new-password"))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessage("Token expirado ou já utilizado");
+
+            verify(userRepository, never()).updatePassword(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Should throw for an already used reset token")
+        void shouldThrowForAlreadyUsedResetToken() {
+            VerificationToken token = VerificationToken.builder()
+                    .id(1L)
+                    .token("used-token")
+                    .user(testUser)
+                    .type(TokenType.PASSWORD_RESET)
+                    .expiresAt(LocalDateTime.now().plusMinutes(30))
+                    .usedAt(LocalDateTime.now().minusMinutes(1))
+                    .build();
+            when(verificationTokenRepository.findByTokenAndType("used-token", TokenType.PASSWORD_RESET))
+                    .thenReturn(Optional.of(token));
+
+            assertThatThrownBy(() -> authService.confirmPasswordReset("used-token", "new-password"))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessage("Token expirado ou já utilizado");
+        }
+    }
+
+    @Nested
+    @DisplayName("Email Verification Tests")
+    class EmailVerificationTests {
+
+        @Test
+        @DisplayName("Should issue a verification token on register")
+        void shouldIssueVerificationTokenOnRegister() {
+            AuthDto.RegisterRequest request = AuthDto.RegisterRequest.builder()
+                    .email("newuser@example.com")
+                    .password("password123")
+                    .role(User.UserRole.CUSTOMER)
+                    .build();
+            User savedUser = User.builder().id(2L).email("newuser@example.com")
+                    .role(User.UserRole.CUSTOMER).active(true).emailVerified(false).build();
+            when(userRepository.existsByEmail(anyString())).thenReturn(false);
+            when(passwordEncoder.encode(anyString())).thenReturn("encoded-password");
+            when(userRepository.save(any(User.class))).thenReturn(savedUser);
+
+            authService.register(request);
+
+            ArgumentCaptor<VerificationToken> captor = ArgumentCaptor.forClass(VerificationToken.class);
+            verify(verificationTokenRepository).save(captor.capture());
+            assertThat(captor.getValue().getType()).isEqualTo(TokenType.EMAIL_VERIFICATION);
+            assertThat(captor.getValue().getUser()).isEqualTo(savedUser);
+        }
+
+        @Test
+        @DisplayName("Should verify email with a valid token")
+        void shouldVerifyEmailWithValidToken() {
+            VerificationToken token = VerificationToken.builder()
+                    .id(1L)
+                    .token("verify-token")
+                    .user(testUser)
+                    .type(TokenType.EMAIL_VERIFICATION)
+                    .expiresAt(LocalDateTime.now().plusHours(1))
+                    .build();
+            when(verificationTokenRepository.findByTokenAndType("verify-token", TokenType.EMAIL_VERIFICATION))
+                    .thenReturn(Optional.of(token));
+
+            authService.verifyEmail("verify-token");
+
+            verify(userRepository).verifyEmail(eq(1L), any(LocalDateTime.class));
+            assertThat(token.isUsed()).isTrue();
+        }
+
+        @Test
+        @DisplayName("Should throw for an invalid verification token")
+        void shouldThrowForInvalidVerificationToken() {
+            when(verificationTokenRepository.findByTokenAndType("bad-token", TokenType.EMAIL_VERIFICATION))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> authService.verifyEmail("bad-token"))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessage("Token inválido");
+        }
+
+        @Test
+        @DisplayName("Should throw for an expired verification token")
+        void shouldThrowForExpiredVerificationToken() {
+            VerificationToken token = VerificationToken.builder()
+                    .id(1L)
+                    .token("expired-token")
+                    .user(testUser)
+                    .type(TokenType.EMAIL_VERIFICATION)
+                    .expiresAt(LocalDateTime.now().minusMinutes(1))
+                    .build();
+            when(verificationTokenRepository.findByTokenAndType("expired-token", TokenType.EMAIL_VERIFICATION))
+                    .thenReturn(Optional.of(token));
+
+            assertThatThrownBy(() -> authService.verifyEmail("expired-token"))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessage("Token expirado ou já utilizado");
+
+            verify(userRepository, never()).verifyEmail(any(), any());
         }
     }
 }
