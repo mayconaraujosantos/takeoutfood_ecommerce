@@ -3,7 +3,7 @@ springProfile: docker
 
 image:
   repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/user-service
-  tag: 90efa3c258a128dcf9c387eae6b36aa344b3a147
+  tag: fef223984dad20d282663ecc8e57323ecae312f6
 
 service:
   port: 8082
