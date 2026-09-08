@@ -10,12 +10,7 @@ service:
   targetPort: 8083
 
 env:
-  # stringtype=unspecified: RestaurantRepository.search()'s "LOWER(CONCAT('%', :name, '%'))"
-  # binds :name as null on every request without a name filter (this endpoint's only caller
-  # today, GET /api/v1/restaurants with no query params). pgjdbc sends an untyped null
-  # parameter as bytea, and Postgres then fails resolving LOWER(bytea) before it ever gets to
-  # evaluate ":name IS NULL" -- this tells the driver to let Postgres infer the type instead.
-  DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db?stringtype=unspecified
+  DATABASE_URL: jdbc:postgresql://postgres:5432/ifood_db
   DB_USERNAME: ifood_user
   DB_PASSWORD: ifood_pass
   KAFKA_BOOTSTRAP_SERVERS: kafka:9092
