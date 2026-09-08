@@ -1,9 +1,10 @@
 nameOverride: auth-service
 springProfile: dev
 
+# :local -- see api-gateway.yaml's comment; same reasoning.
 image:
-  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/auth-service
-  tag: 90efa3c258a128dcf9c387eae6b36aa344b3a147
+  repository: localhost/ifood-clone/auth-service
+  tag: local
 
 service:
   port: 8081

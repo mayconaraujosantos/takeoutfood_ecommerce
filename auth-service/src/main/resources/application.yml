@@ -28,7 +28,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
@@ -37,6 +37,11 @@ spring:
         jdbc:
           time_zone: UTC
     open-in-view: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    table: flyway_schema_history_auth
 
   security:
     user:
