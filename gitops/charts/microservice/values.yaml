@@ -67,3 +67,11 @@ serviceMonitor:
   labels: {}
 
 podAnnotations: {}
+
+# Off by default -- only api-gateway (the one service meant to be reached from outside the
+# cluster) turns this on in its own values file.
+ingress:
+  enabled: false
+  className: nginx
+  host: ""
+  annotations: {}
