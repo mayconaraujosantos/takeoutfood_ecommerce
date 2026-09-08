@@ -12,7 +12,7 @@ spec:
   generators:
     - git:
         repoURL: https://github.com/mayconaraujosantos/takeoutfood_ecommerce.git
-        revision: main
+        revision: develop
         files:
           - path: "gitops/apps/services/values/*.yaml"
   template:
@@ -23,7 +23,7 @@ spec:
       project: default
       source:
         repoURL: https://github.com/mayconaraujosantos/takeoutfood_ecommerce.git
-        targetRevision: main
+        targetRevision: develop
         path: gitops/charts/microservice
         helm:
           valueFiles:
