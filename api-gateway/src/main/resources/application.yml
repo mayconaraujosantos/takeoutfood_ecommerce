@@ -39,6 +39,12 @@ spring:
       # login/register properly; this bypass only skips the gateway's identity-header injection
       # for them). Path-only match, no HTTP method check -- see AuthFilter.java's known
       # limitation before adding write endpoints under restaurants/menus.
+      #
+      # This block only takes effect when config-server is unreachable (fail-fast: false above).
+      # Whenever config-server IS reachable, its served config/api-gateway.yml's own
+      # spring.cloud.gateway.default-filters property REPLACES this list wholesale (Spring Cloud
+      # Config properties outrank the app's local application.yml) -- keep the two in sync, or a
+      # change made only here silently does nothing in every real (non-degraded) deployment.
       default-filters:
         - name: AuthFilter
           args:
