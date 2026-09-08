@@ -123,11 +123,12 @@ class AuthFilterTest {
     private void generateTestTokens() {
         SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(TEST_SECRET));
 
-        // Valid token
+        // Valid token -- shaped like auth-service's real JwtService output: subject is the
+        // email, numeric id and role are separate claims.
         validToken = Jwts.builder()
-                .subject("123")
-                .claim("email", "test@example.com")
-                .claim("roles", "CUSTOMER")
+                .subject("test@example.com")
+                .claim("userId", 123L)
+                .claim("role", "CUSTOMER")
                 .claim("authorities", "ROLE_CUSTOMER")
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + 60000)) // 1 minute
@@ -136,9 +137,9 @@ class AuthFilterTest {
 
         // Expired token
         expiredToken = Jwts.builder()
-                .subject("123")
-                .claim("email", "test@example.com")
-                .claim("roles", "CUSTOMER")
+                .subject("test@example.com")
+                .claim("userId", 123L)
+                .claim("role", "CUSTOMER")
                 .issuedAt(new Date(System.currentTimeMillis() - 120000)) // 2 minutes ago
                 .expiration(new Date(System.currentTimeMillis() - 60000)) // 1 minute ago
                 .signWith(key)
@@ -185,7 +186,7 @@ class AuthFilterTest {
             // Given
             SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(TEST_SECRET));
             String minimalToken = Jwts.builder()
-                    .subject("456")
+                    .subject("noclaims@example.com")
                     .issuedAt(new Date())
                     .expiration(new Date(System.currentTimeMillis() + 60000))
                     .signWith(key)
@@ -204,8 +205,10 @@ class AuthFilterTest {
             result.block(); // Execute the filter
 
             verify(chain).filter(any(ServerWebExchange.class));
-            verify(requestBuilder).header("X-User-Id", "456");
-            verify(requestBuilder).header("X-User-Email", "");
+            // No userId/role claims -> those headers fall back to "", but email is always the
+            // subject, so it's never blank when the token itself is well-formed.
+            verify(requestBuilder).header("X-User-Id", "");
+            verify(requestBuilder).header("X-User-Email", "noclaims@example.com");
             verify(requestBuilder).header("X-User-Roles", "");
             verify(requestBuilder).header("X-User-Authorities", "");
             verify(requestBuilder).header("X-Authenticated", "true");
@@ -217,9 +220,9 @@ class AuthFilterTest {
             // Given
             SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(TEST_SECRET));
             String fullToken = Jwts.builder()
-                    .subject("789")
-                    .claim("email", "admin@example.com")
-                    .claim("roles", "ADMIN")
+                    .subject("admin@example.com")
+                    .claim("userId", 789L)
+                    .claim("role", "ADMIN")
                     .claim("authorities", "ROLE_ADMIN,ROLE_USER")
                     .issuedAt(new Date())
                     .expiration(new Date(System.currentTimeMillis() + 60000))
