@@ -1,9 +1,10 @@
 nameOverride: config-server
 springProfile: native
 
+# :local -- see api-gateway.yaml's comment; same reasoning.
 image:
-  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/config-server
-  tag: 90efa3c258a128dcf9c387eae6b36aa344b3a147
+  repository: localhost/ifood-clone/config-server
+  tag: local
 
 service:
   port: 8888

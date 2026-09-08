@@ -1,8 +1,12 @@
 nameOverride: api-gateway
 
+# :local -- built with `make gitops-build-images` + loaded with `make gitops-load-images`
+# (see scripts/gitops/build-images.sh / load-images.sh). The "local" environment tracks
+# develop and iterates on locally-built images, skipping the CI/GHCR round trip entirely;
+# switch back to a ghcr.io tag here if/when this needs a real published image again.
 image:
-  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/api-gateway
-  tag: 90efa3c258a128dcf9c387eae6b36aa344b3a147
+  repository: localhost/ifood-clone/api-gateway
+  tag: local
 
 service:
   port: 8080

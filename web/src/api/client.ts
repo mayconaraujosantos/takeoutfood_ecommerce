@@ -3,7 +3,9 @@ import type { ApiResponse } from './types'
 // Every service in this fleet sits behind the api-gateway path convention
 // /<service-id>/api/v1/... (Spring Cloud Gateway's discovery-locator, lower-cased service id,
 // no prefix stripping) -- callers pass that full path, e.g. "/auth-service/api/v1/auth/login".
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://ifood.local'
+// In dev, always use '' so requests stay same-origin and go through the Vite proxy (see vite.config.ts),
+// avoiding CORS against http://ifood.local -- VITE_API_BASE_URL from .env is only for prod builds.
+const API_BASE_URL = import.meta.env.DEV ? '' : ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://ifood.local')
 
 export class ApiError extends Error {
   status: number
