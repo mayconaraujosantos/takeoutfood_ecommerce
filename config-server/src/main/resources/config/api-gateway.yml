@@ -49,9 +49,16 @@ spring:
               /[^/]+/actuator/.*,
               /[^/]+/v3/api-docs.*,
               /[^/]+/swagger-ui.*
-        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
-        - AddResponseHeader=X-Gateway-Version, 1.0.0
-        - AddResponseHeader=X-Response-Time, #{T(System).currentTimeMillis()}
+        - "DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin"
+        - "AddResponseHeader=X-Gateway-Version, 1.0.0"
+        # Dropped: "AddResponseHeader=X-Response-Time, #{T(System).currentTimeMillis()}".
+        # T(...) type references aren't supported here at all -- ShortcutConfigurable.getValue
+        # evaluates shorthand filter args with a bare SimpleEvaluationContext, which has no
+        # type locator by design (fails with "EL1005E: Type cannot be found", fully-qualified
+        # or not; this is a security-motivated SpEL restriction, not a typo). Crashed
+        # api-gateway's route refresh on every boot once it ever actually loaded this far.
+        # It also wouldn't have measured anything real even if it worked: shortcut args are
+        # evaluated once when the route is built, not per-request.
         - name: RequestRateLimiter
           args:
             redis-rate-limiter.replenishRate: 20
@@ -194,14 +201,12 @@ management:
   health:
     redis:
       enabled: true
-    defaults:
-      enabled: false
     diskspace:
       enabled: true
     ping:
       enabled: true
     defaults:
-      enabled: true
+      enabled: false
   metrics:
     export:
       prometheus:

@@ -27,11 +27,22 @@ public class GatewayUserContext {
     @Component
     public static class UserContextFilter extends OncePerRequestFilter {
 
+        // The gateway's AuthFilter bypasses JWT validation for these same public paths (see
+        // api-gateway's default-filters bypassPaths), but a bypass there only means it doesn't
+        // inject X-Authenticated/X-User-Id -- it says nothing to this filter, which otherwise
+        // demands those headers on every request. Without a matching exclusion here, a
+        // legitimately public request (no token, by design) still 401s downstream.
+        // Same path covers GET (list/detail, public) and POST/PUT (owner-only, checked inside
+        // the controller via UserContext.isRestaurantOwner()) -- there's no per-method bypass
+        // here or at the gateway yet, so those checks currently degrade to "always false"
+        // instead of "unauthenticated" when hit without a token. Tighten before this matters,
+        // i.e. before a restaurant-owner backoffice actually uses the write endpoints.
         private static final List<String> EXCLUDED_PATHS = Arrays.asList(
                 "/actuator/health",
                 "/actuator/info",
                 "/v3/api-docs",
-                "/swagger-ui");
+                "/swagger-ui",
+                "/api/v1/restaurants");
 
         @Override
         protected void doFilterInternal(HttpServletRequest request,

@@ -1,8 +1,9 @@
 nameOverride: restaurant-service
 
+# :local -- see api-gateway.yaml's comment; same reasoning.
 image:
-  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/restaurant-service
-  tag: 90efa3c258a128dcf9c387eae6b36aa344b3a147
+  repository: localhost/ifood-clone/restaurant-service
+  tag: local
 
 service:
   port: 8083
