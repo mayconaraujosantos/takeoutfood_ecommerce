@@ -21,7 +21,9 @@ import com.ifoodclone.order.service.OrderService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/orders")
 @Tag(name = "Orders", description = "Carrinho, checkout e acompanhamento de pedidos")
@@ -40,6 +42,7 @@ public class OrderController {
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Carrinho criado", OrderInfo.from(order)));
         } catch (RuntimeException ex) {
+            log.error("createCart failed", ex);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(ex.getMessage()));
         }
     }
@@ -94,6 +97,7 @@ public class OrderController {
         } catch (IllegalStateException | IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(ex.getMessage()));
         } catch (RuntimeException ex) {
+            log.error("Order operation failed", ex);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(ex.getMessage()));
         }
     }
