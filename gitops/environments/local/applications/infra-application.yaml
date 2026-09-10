@@ -10,7 +10,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/mayconaraujosantos/takeoutfood_ecommerce.git
-    targetRevision: main
+    targetRevision: develop
     path: gitops/apps/infra
   destination:
     server: https://kubernetes.default.svc

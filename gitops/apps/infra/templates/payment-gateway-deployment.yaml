@@ -1,0 +1,73 @@
+# Node-RED standing in for a real payment gateway/PSP in this dev cluster. payment-service's
+# PaymentGatewayClient posts to POST /charge on this Service (fixed hostname:port, see
+# application.yml's payment.gateway-url default); the flow answers 202 immediately and
+# resolves the charge 3-6s later via a webhook back to payment-service. See
+# payment-gateway-configmap.yaml for the flow itself.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-gateway
+  labels:
+    app: payment-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-gateway
+  template:
+    metadata:
+      labels:
+        app: payment-gateway
+    spec:
+      containers:
+        - name: nodered
+          image: docker.io/nodered/node-red:4.0.9
+          ports:
+            - containerPort: 1880
+              name: http
+          env:
+            - name: FLOWS
+              value: flows.json
+          volumeMounts:
+            - name: flows
+              mountPath: /data/flows.json
+              subPath: flows.json
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 1880
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 1880
+            initialDelaySeconds: 20
+            periodSeconds: 15
+      volumes:
+        - name: flows
+          configMap:
+            name: payment-gateway-flows
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-gateway
+  labels:
+    app: payment-gateway
+spec:
+  type: ClusterIP
+  ports:
+    - port: 1880
+      targetPort: 1880
+      protocol: TCP
+      name: http
+  selector:
+    app: payment-gateway

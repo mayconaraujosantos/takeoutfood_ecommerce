@@ -18,153 +18,47 @@ spring:
 
   cloud:
     gateway:
-      # Discovery configuration
+      # Discovery configuration -- every service reachable through the gateway is addressed as
+      # /<service-id>/** (lower-cased Eureka id), full path forwarded unchanged. This used to
+      # coexist with an explicit `routes:` list below (StripPrefix=3, no /<service-id> segment)
+      # that's been removed: its StripPrefix math didn't line up with what the services'
+      # controllers actually expect (@RequestMapping("/api/v1/restaurants") etc. wants the
+      # full path, not what's left after stripping 3 segments), and -- as the properties served
+      # from here take precedence over api-gateway's own application.yml -- its `default-filters`
+      # (rate limiter + headers, no AuthFilter) silently replaced the gateway's own AuthFilter
+      # wiring wholesale, so nothing here ever got a validated JWT or X-User-Id.
       discovery:
         locator:
           enabled: true
           lower-case-service-id: true
 
-      # Route definitions
-      routes:
-        # Authentication Service - Public routes (no authentication required)
-        - id: auth-service-public
-          uri: lb://auth-service
-          predicates:
-            - Path=/api/v1/auth/login,/api/v1/auth/register,/api/v1/auth/forgot-password,/api/v1/auth/reset-password,/api/v1/auth/verify-email,/api/v1/auth/refresh-token
-            - Method=POST
-          filters:
-            - AddResponseHeader=X-Route-Type, public
-            - AddResponseHeader=X-Service-Name, auth-service
-
-        # Authentication Service - Protected routes
-        - id: auth-service-protected
-          uri: lb://auth-service
-          predicates:
-            - Path=/api/v1/auth/**
-          filters:
-            - name: AuthFilter
-              args:
-                requireAuth: true
-            - AddResponseHeader=X-Route-Type, protected
-            - AddResponseHeader=X-Service-Name, auth-service
-
-        # User Management Service - Protected routes
-        - id: user-service
-          uri: lb://user-service
-          predicates:
-            - Path=/api/v1/users/**
-          filters:
-            - name: AuthFilter
-              args:
-                requireAuth: true
-            - AddResponseHeader=X-Route-Type, protected
-            - AddResponseHeader=X-Service-Name, user-service
-            - StripPrefix=3
-
-        # Restaurant Management Service - Protected routes
-        - id: restaurant-service
-          uri: lb://restaurant-service
-          predicates:
-            - Path=/api/v1/restaurants/**
-          filters:
-            - name: AuthFilter
-              args:
-                requireAuth: true
-            - AddResponseHeader=X-Route-Type, protected
-            - AddResponseHeader=X-Service-Name, restaurant-service
-            - StripPrefix=3
-
-        # Menu Management Service - Protected routes
-        - id: menu-service
-          uri: lb://menu-service
-          predicates:
-            - Path=/api/v1/menus/**
-          filters:
-            - name: AuthFilter
-              args:
-                requireAuth: true
-            - AddResponseHeader=X-Route-Type, protected
-            - AddResponseHeader=X-Service-Name, menu-service
-            - StripPrefix=3
-
-        # Order Management Service - Protected routes
-        - id: order-service
-          uri: lb://order-service
-          predicates:
-            - Path=/api/v1/orders/**
-          filters:
-            - name: AuthFilter
-              args:
-                requireAuth: true
-            - AddResponseHeader=X-Route-Type, protected
-            - AddResponseHeader=X-Service-Name, order-service
-            - StripPrefix=3
-
-        # Payment Processing Service - Protected routes
-        - id: payment-service
-          uri: lb://payment-service
-          predicates:
-            - Path=/api/v1/payments/**
-          filters:
-            - name: AuthFilter
-              args:
-                requireAuth: true
-            - AddResponseHeader=X-Route-Type, protected
-            - AddResponseHeader=X-Service-Name, payment-service
-            - StripPrefix=3
-
-        # Notification Service - Protected routes
-        - id: notification-service
-          uri: lb://notification-service
-          predicates:
-            - Path=/api/v1/notifications/**
-          filters:
-            - name: AuthFilter
-              args:
-                requireAuth: true
-            - AddResponseHeader=X-Route-Type, protected
-            - AddResponseHeader=X-Service-Name, notification-service
-            - StripPrefix=3
-
-        # Delivery Management Service - Protected routes
-        - id: delivery-service
-          uri: lb://delivery-service
-          predicates:
-            - Path=/api/v1/deliveries/**
-          filters:
-            - name: AuthFilter
-              args:
-                requireAuth: true
-            - AddResponseHeader=X-Route-Type, protected
-            - AddResponseHeader=X-Service-Name, delivery-service
-            - StripPrefix=3
-
-        # Review Management Service - Protected routes
-        - id: review-service
-          uri: lb://review-service
-          predicates:
-            - Path=/api/v1/reviews/**
-          filters:
-            - name: AuthFilter
-              args:
-                requireAuth: true
-            - AddResponseHeader=X-Route-Type, protected
-            - AddResponseHeader=X-Service-Name, review-service
-            - StripPrefix=3
-
-        # Health checks (public)
-        - id: health-checks
-          uri: lb://service-discovery
-          predicates:
-            - Path=/health,/actuator/health
-          filters:
-            - AddResponseHeader=X-Route-Type, health
-
-      # Default filters applied to all routes (Professional Setup)
+      # Applied to every discovery-locator route. AuthFilter validates the JWT and injects
+      # X-User-Id/X-User-Email/X-User-Roles/X-Authenticated for downstream services'
+      # GatewayUserContext; bypassPaths exempts the endpoints meant to be public (auth's own
+      # SecurityConfig still protects login/register itself). Path-only match, no HTTP method
+      # check -- tighten this before adding write endpoints under restaurants/menus (e.g. a
+      # future restaurant-owner backoffice).
       default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
-        - AddResponseHeader=X-Gateway-Version, 1.0.0
-        - AddResponseHeader=X-Response-Time, #{T(System).currentTimeMillis()}
+        - name: AuthFilter
+          args:
+            requireAuth: true
+            bypassPaths: >-
+              /[^/]+/api/v1/auth/(login|register|refresh|health|password/reset.*|email/verify),
+              /[^/]+/api/v1/restaurants(/.*)?,
+              /[^/]+/api/v1/menus(/.*)?,
+              /[^/]+/actuator/.*,
+              /[^/]+/v3/api-docs.*,
+              /[^/]+/swagger-ui.*
+        - "DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin"
+        - "AddResponseHeader=X-Gateway-Version, 1.0.0"
+        # Dropped: "AddResponseHeader=X-Response-Time, #{T(System).currentTimeMillis()}".
+        # T(...) type references aren't supported here at all -- ShortcutConfigurable.getValue
+        # evaluates shorthand filter args with a bare SimpleEvaluationContext, which has no
+        # type locator by design (fails with "EL1005E: Type cannot be found", fully-qualified
+        # or not; this is a security-motivated SpEL restriction, not a typo). Crashed
+        # api-gateway's route refresh on every boot once it ever actually loaded this far.
+        # It also wouldn't have measured anything real even if it worked: shortcut args are
+        # evaluated once when the route is built, not per-request.
         - name: RequestRateLimiter
           args:
             redis-rate-limiter.replenishRate: 20
@@ -307,14 +201,12 @@ management:
   health:
     redis:
       enabled: true
-    defaults:
-      enabled: false
     diskspace:
       enabled: true
     ping:
       enabled: true
     defaults:
-      enabled: true
+      enabled: false
   metrics:
     export:
       prometheus:

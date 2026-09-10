@@ -3,6 +3,11 @@
 # From then on, Argo CD watches gitops/environments/local/applications and
 # creates/updates/removes the child Applications (infra, observability, services)
 # by itself - adding a new file there is enough, no more kubectl apply needed.
+#
+# targetRevision: develop, not main -- this whole gitops/environments/local tree is the
+# local dev cluster, and gating every dev-loop iteration behind Git Flow's release/hotfix-only
+# main (plus a full CI/GHCR round trip) is friction a local minikube doesn't need. main stays
+# reserved for a real staging/production environment whenever one exists.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -14,7 +19,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/mayconaraujosantos/takeoutfood_ecommerce.git
-    targetRevision: main
+    targetRevision: develop
     path: gitops/environments/local/applications
     directory:
       recurse: false

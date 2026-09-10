@@ -1,0 +1,133 @@
+# Flow for the Node-RED payment gateway simulator (see payment-gateway-deployment.yaml).
+# Source of truth is /payment-gateway/flows.json at the repo root -- keep the two in sync;
+# this copy exists because a ConfigMap can only be built from inline/file data, not a
+# cross-directory reference. Mounted read-only at /data/flows.json, so saving from the
+# Node-RED editor UI won't persist -- edit the repo file and redeploy instead.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-gateway-flows
+  labels:
+    app: payment-gateway
+data:
+  flows.json: |
+    [
+      {
+        "id": "gateway-tab",
+        "type": "tab",
+        "label": "Payment Gateway Simulator",
+        "disabled": false,
+        "info": "Simulates an external PSP for payment-service. POST /charge answers 202/PENDING immediately, then resolves the charge 3-6s later via a webhook back to payment-service, the same shape a real async PIX/card confirmation would have."
+      },
+      {
+        "id": "charge-in",
+        "type": "http in",
+        "z": "gateway-tab",
+        "name": "POST /charge",
+        "url": "/charge",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 140,
+        "y": 140,
+        "wires": [["decide-fn"]]
+      },
+      {
+        "id": "decide-fn",
+        "type": "function",
+        "z": "gateway-tab",
+        "name": "decide outcome + build 202 response",
+        "func": "const body = msg.payload || {};\nconst amount = Number(body.amount);\n\n// Same base rule the old in-process mock used (positive amount approves), plus a\n// small simulated decline rate so this feels like a real processor instead of an\n// always-green stub.\nconst approved = amount > 0 && Math.random() > 0.1;\n\nmsg.orderId = body.orderId;\nmsg.finalStatus = approved ? 'APPROVED' : 'REJECTED';\n\nmsg.statusCode = 202;\nmsg.payload = {\n    success: true,\n    message: 'Pagamento em processamento',\n    data: { orderId: body.orderId, status: 'PENDING' },\n    timestamp: new Date().toISOString()\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 140,
+        "wires": [["charge-response", "resolve-delay"]]
+      },
+      {
+        "id": "charge-response",
+        "type": "http response",
+        "z": "gateway-tab",
+        "name": "202 Accepted",
+        "statusCode": "",
+        "headers": {},
+        "x": 680,
+        "y": 100,
+        "wires": []
+      },
+      {
+        "id": "resolve-delay",
+        "type": "delay",
+        "z": "gateway-tab",
+        "name": "simulate PSP processing time",
+        "pauseType": "random",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "3",
+        "randomLast": "6",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 420,
+        "y": 220,
+        "wires": [["webhook-fn"]]
+      },
+      {
+        "id": "webhook-fn",
+        "type": "function",
+        "z": "gateway-tab",
+        "name": "build webhook payload",
+        "func": "msg.payload = {\n    orderId: msg.orderId,\n    status: msg.finalStatus\n};\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 660,
+        "y": 220,
+        "wires": [["webhook-request"]]
+      },
+      {
+        "id": "webhook-request",
+        "type": "http request",
+        "z": "gateway-tab",
+        "name": "POST payment-service webhook",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "http://payment-service:8086/api/v1/payments/webhook",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParseAll": false,
+        "authType": "",
+        "senderr": false,
+        "x": 900,
+        "y": 220,
+        "wires": [["webhook-debug"]]
+      },
+      {
+        "id": "webhook-debug",
+        "type": "debug",
+        "z": "gateway-tab",
+        "name": "webhook result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1150,
+        "y": 220,
+        "wires": []
+      }
+    ]

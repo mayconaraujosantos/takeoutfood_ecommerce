@@ -114,9 +114,14 @@ public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> 
     }
 
     private ServerHttpRequest buildAuthenticatedRequest(ServerHttpRequest request, Claims claims, String requestPath) {
-        String userId = claims.getSubject();
-        String email = claims.get("email", String.class);
-        String roles = claims.get("roles", String.class);
+        // auth-service's JwtService puts the numeric id in the "userId" claim and the role in
+        // "role" (singular); the JWT subject is the user's email, not the id. Reading getSubject()
+        // here used to hand order-service (and friends) an email where they expect
+        // Long.parseLong(userId), and "roles"/"authorities" aren't claims JwtService ever sets.
+        Long userIdClaim = claims.get("userId", Long.class);
+        String userId = userIdClaim != null ? String.valueOf(userIdClaim) : "";
+        String email = claims.getSubject();
+        String roles = claims.get("role", String.class);
         String authorities = claims.get("authorities", String.class);
 
         return request.mutate()

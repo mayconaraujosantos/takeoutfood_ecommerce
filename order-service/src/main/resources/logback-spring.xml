@@ -137,7 +137,7 @@
     </springProfile>
 
     <!-- Logger configurations -->
-    <springProfile name="dev,test">
+    <springProfile name="dev,test,k8s">
         <logger name="com.ifoodclone.order" level="DEBUG" additivity="false">
             <appender-ref ref="CONSOLE" />
             <appender-ref ref="ASYNC_JSON_FILE" />

@@ -33,7 +33,10 @@ public class GatewayUserContext {
                 "/actuator/health",
                 "/actuator/info",
                 "/v3/api-docs",
-                "/swagger-ui");
+                "/swagger-ui",
+                // Called by the Node-RED payment gateway simulator, not an end user -- it
+                // has no JWT/gateway identity to present. See PaymentController#webhook.
+                "/api/v1/payments/webhook");
 
         @Override
         protected void doFilterInternal(HttpServletRequest request,

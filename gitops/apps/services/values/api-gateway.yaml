@@ -1,12 +1,25 @@
 nameOverride: api-gateway
 
+# :local -- built with `make gitops-build-images` + loaded with `make gitops-load-images`
+# (see scripts/gitops/build-images.sh / load-images.sh). The "local" environment tracks
+# develop and iterates on locally-built images, skipping the CI/GHCR round trip entirely;
+# switch back to a ghcr.io tag here if/when this needs a real published image again.
 image:
-  repository: ghcr.io/mayconaraujosantos/takeoutfood_ecommerce/api-gateway
-  tag: 90efa3c258a128dcf9c387eae6b36aa344b3a147
+  repository: localhost/ifood-clone/api-gateway
+  tag: local
 
 service:
   port: 8080
   targetPort: 8080
+
+# Only service in the fleet exposed outside the cluster -- everything else stays ClusterIP-only
+# and is reached through this gateway. Access locally via `minikube ip` mapped to this host in
+# /etc/hosts (minikube has no real LoadBalancer, so the ingress-nginx addon is reached through
+# the node IP directly).
+ingress:
+  enabled: true
+  className: nginx
+  host: ifood.local
 
 env:
   # Must match auth-service's JWT_SECRET exactly -- the gateway's AuthFilter validates

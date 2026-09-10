@@ -27,11 +27,19 @@ public class GatewayUserContext {
     @Component
     public static class UserContextFilter extends OncePerRequestFilter {
 
+        // The gateway's AuthFilter bypasses JWT validation for this same public path (see
+        // api-gateway's default-filters bypassPaths), but a bypass there only means it doesn't
+        // inject X-Authenticated/X-User-Id -- it says nothing to this filter, which otherwise
+        // demands those headers on every request. Without a matching exclusion here, a
+        // legitimately public request (no token, by design) still 401s downstream.
+        // "/api/v1/menus/restaurant" is the public read-by-restaurant path only -- distinct from
+        // "/api/v1/menus" (owner-only create), so this doesn't touch that one.
         private static final List<String> EXCLUDED_PATHS = Arrays.asList(
                 "/actuator/health",
                 "/actuator/info",
                 "/v3/api-docs",
-                "/swagger-ui");
+                "/swagger-ui",
+                "/api/v1/menus/restaurant");
 
         @Override
         protected void doFilterInternal(HttpServletRequest request,

@@ -21,7 +21,9 @@ import com.ifoodclone.order.service.OrderService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/orders")
 @Tag(name = "Orders", description = "Carrinho, checkout e acompanhamento de pedidos")
@@ -40,6 +42,7 @@ public class OrderController {
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Carrinho criado", OrderInfo.from(order)));
         } catch (RuntimeException ex) {
+            log.error("createCart failed", ex);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(ex.getMessage()));
         }
     }
@@ -78,6 +81,17 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
 
+    @GetMapping("/restaurant/{restaurantId}")
+    public ResponseEntity<ApiResponse<List<OrderInfo>>> getByRestaurant(@PathVariable Long restaurantId) {
+        try {
+            List<OrderInfo> orders = orderService.getOrdersByRestaurant(restaurantId).stream()
+                    .map(OrderInfo::from).toList();
+            return ResponseEntity.ok(ApiResponse.success(orders));
+        } catch (SecurityException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error(ex.getMessage()));
+        }
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<ApiResponse<OrderInfo>> updateStatus(@PathVariable Long id,
             @Valid @RequestBody OrderDto.StatusUpdateRequest request) {
@@ -94,6 +108,7 @@ public class OrderController {
         } catch (IllegalStateException | IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(ex.getMessage()));
         } catch (RuntimeException ex) {
+            log.error("Order operation failed", ex);
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(ex.getMessage()));
         }
     }
