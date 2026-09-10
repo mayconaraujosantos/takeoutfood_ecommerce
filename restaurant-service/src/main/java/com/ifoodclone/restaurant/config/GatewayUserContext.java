@@ -32,17 +32,16 @@ public class GatewayUserContext {
         // inject X-Authenticated/X-User-Id -- it says nothing to this filter, which otherwise
         // demands those headers on every request. Without a matching exclusion here, a
         // legitimately public request (no token, by design) still 401s downstream.
-        // Same path covers GET (list/detail, public) and POST/PUT (owner-only, checked inside
-        // the controller via UserContext.isRestaurantOwner()) -- there's no per-method bypass
-        // here or at the gateway yet, so those checks currently degrade to "always false"
-        // instead of "unauthenticated" when hit without a token. Tighten before this matters,
-        // i.e. before a restaurant-owner backoffice actually uses the write endpoints.
+        // /api/v1/restaurants is GET-only public (list/detail); POST/PUT/DELETE are
+        // owner-only and need UserContext populated to run their checks, so this must not
+        // exclude them -- previously matched by prefix regardless of method, which let write
+        // requests through with no identity and made every create/update/delete degrade to
+        // "always forbidden" instead of "unauthenticated".
         private static final List<String> EXCLUDED_PATHS = Arrays.asList(
                 "/actuator/health",
                 "/actuator/info",
                 "/v3/api-docs",
-                "/swagger-ui",
-                "/api/v1/restaurants");
+                "/swagger-ui");
 
         @Override
         protected void doFilterInternal(HttpServletRequest request,
@@ -50,8 +49,10 @@ public class GatewayUserContext {
                 FilterChain filterChain) throws ServletException, IOException {
 
             String path = request.getRequestURI();
+            boolean isPublicRestaurantRead = "GET".equalsIgnoreCase(request.getMethod())
+                    && path.startsWith("/api/v1/restaurants");
 
-            if (EXCLUDED_PATHS.stream().anyMatch(path::startsWith)) {
+            if (isPublicRestaurantRead || EXCLUDED_PATHS.stream().anyMatch(path::startsWith)) {
                 filterChain.doFilter(request, response);
                 return;
             }

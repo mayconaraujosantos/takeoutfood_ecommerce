@@ -71,9 +71,18 @@ class RestaurantControllerTest {
     }
 
     @Test
-    @DisplayName("GET /api/v1/restaurants without gateway headers returns 401")
-    void shouldRejectWithoutAuthHeaders() throws Exception {
+    @DisplayName("GET /api/v1/restaurants without gateway headers is still public")
+    void shouldAllowGetWithoutAuthHeaders() throws Exception {
         mockMvc.perform(get("/api/v1/restaurants"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/restaurants without gateway headers returns 401")
+    void shouldRejectCreateWithoutAuthHeaders() throws Exception {
+        mockMvc.perform(post("/api/v1/restaurants")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Test\",\"cuisineType\":\"Italian\"}"))
                 .andExpect(status().isUnauthorized());
     }
 
