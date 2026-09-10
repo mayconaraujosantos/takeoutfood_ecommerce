@@ -33,13 +33,34 @@ public class PaymentController {
     public ResponseEntity<ApiResponse<PaymentInfo>> process(@Valid @RequestBody PaymentDto.ProcessRequest request) {
         Payment payment = paymentService.process(request);
 
-        if (payment.getStatus() == Payment.PaymentStatus.REJECTED) {
-            return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
+        return switch (payment.getStatus()) {
+            case REJECTED -> ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
                     .body(ApiResponse.error("Pagamento recusado", "REJECTED"));
-        }
+            // The gateway is processing the charge asynchronously -- the caller finds out
+            // the outcome via GET /order/{orderId} or the payment-events Kafka topic.
+            case PENDING -> ResponseEntity.status(HttpStatus.ACCEPTED)
+                    .body(ApiResponse.success("Pagamento em processamento", PaymentInfo.from(payment)));
+            case APPROVED -> ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Pagamento aprovado", PaymentInfo.from(payment)));
+        };
+    }
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Pagamento aprovado", PaymentInfo.from(payment)));
+    // Called by the payment gateway (Node-RED) once it resolves a charge it previously
+    // accepted as PENDING. Reachable without gateway-user headers -- see
+    // GatewayUserContext's EXCLUDED_PATHS -- since this is a system-to-system callback, not
+    // an end-user request; a real integration would verify a shared secret/signature here
+    // instead, which this demo simulator skips.
+    @PostMapping("/webhook")
+    public ResponseEntity<ApiResponse<PaymentInfo>> webhook(@Valid @RequestBody PaymentDto.WebhookRequest request) {
+        try {
+            Payment.PaymentStatus status = "APPROVED".equalsIgnoreCase(request.getStatus())
+                    ? Payment.PaymentStatus.APPROVED
+                    : Payment.PaymentStatus.REJECTED;
+            Payment payment = paymentService.resolve(request.getOrderId(), status);
+            return ResponseEntity.ok(ApiResponse.success(PaymentInfo.from(payment)));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(ex.getMessage()));
+        }
     }
 
     @GetMapping("/order/{orderId}")

@@ -6,10 +6,12 @@ import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.ifoodclone.payment.entity.Payment;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 public class PaymentDto {
 
@@ -26,6 +28,25 @@ public class PaymentDto {
         private BigDecimal amount;
         @NotNull(message = "Método de pagamento é obrigatório")
         private Payment.PaymentMethod method;
+    }
+
+    // Sent by the Node-RED gateway simulator once it resolves a charge -- status is a
+    // plain string ("APPROVED"/"REJECTED") rather than Payment.PaymentStatus so an
+    // unexpected value from the gateway is a business decision (see PaymentController),
+    // not a 400 from Jackson failing to deserialize an unknown enum constant.
+    @Data
+    @Builder
+    @NoArgsConstructor
+    public static class WebhookRequest {
+        @NotNull(message = "Pedido é obrigatório")
+        private Long orderId;
+        @NotBlank(message = "Status é obrigatório")
+        private String status;
+
+        public WebhookRequest(Long orderId, String status) {
+            this.orderId = orderId;
+            this.status = status;
+        }
     }
 
     @Data

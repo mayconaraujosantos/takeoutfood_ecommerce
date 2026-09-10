@@ -115,9 +115,16 @@ public class OrderService {
         PaymentResult payment = paymentClient.charge(order.getId(), order.getTotalAmount(),
                 request.getPaymentMethod().name());
 
-        order.setStatus("APPROVED".equals(payment.getStatus()) ? OrderStatus.CONFIRMED : OrderStatus.PAYMENT_FAILED);
-        orderRepository.save(order);
-        publishStatusChanged(order);
+        // The gateway now resolves the charge asynchronously (PENDING here means "accepted
+        // for processing") -- PaymentEventListener is what actually moves this order to
+        // CONFIRMED/PAYMENT_FAILED once the payment-events message arrives. Only an
+        // immediate REJECTED (bad request, or payment-service/the gateway unreachable) is
+        // handled here, since no such event will ever arrive for it.
+        if ("REJECTED".equals(payment.getStatus())) {
+            order.setStatus(OrderStatus.PAYMENT_FAILED);
+            orderRepository.save(order);
+            publishStatusChanged(order);
+        }
 
         return order;
     }
@@ -133,6 +140,16 @@ public class OrderService {
     @Transactional(readOnly = true)
     public List<Order> getMyOrders() {
         return orderRepository.findByUserId(UserContext.getUserId());
+    }
+
+    // Same simplification as assertCanView below: not scoped to "only this owner's own
+    // restaurant" -- would need a remote call to restaurant-service to resolve ownerId.
+    @Transactional(readOnly = true)
+    public List<Order> getOrdersByRestaurant(Long restaurantId) {
+        if (!UserContext.isRestaurantOwner() && !UserContext.isAdmin()) {
+            throw new SecurityException("Apenas o restaurante pode ver esses pedidos");
+        }
+        return orderRepository.findByRestaurantId(restaurantId);
     }
 
     public Order updateStatus(Long orderId, OrderDto.StatusUpdateRequest request) {

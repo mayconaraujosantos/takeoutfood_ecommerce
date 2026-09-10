@@ -58,6 +58,23 @@ class PaymentControllerTest {
     }
 
     @Test
+    @DisplayName("POST /api/v1/payments returns 202 when pending")
+    void shouldReturn202WhenPending() throws Exception {
+        Payment pending = Payment.builder().id(1L).orderId(10L).amount(new BigDecimal("59.90"))
+                .method(Payment.PaymentMethod.PIX).status(Payment.PaymentStatus.PENDING).build();
+        when(paymentService.process(any())).thenReturn(pending);
+
+        mockMvc.perform(post("/api/v1/payments")
+                .header("X-Authenticated", "true")
+                .header("X-User-Id", "1")
+                .header("X-User-Roles", "CUSTOMER")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"orderId\":10,\"amount\":59.90,\"method\":\"PIX\"}"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.data.status").value("PENDING"));
+    }
+
+    @Test
     @DisplayName("POST /api/v1/payments returns 402 when rejected")
     void shouldReturn402WhenRejected() throws Exception {
         Payment rejected = Payment.builder().id(1L).orderId(10L).amount(BigDecimal.ZERO)
@@ -92,5 +109,31 @@ class PaymentControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"orderId\":10,\"amount\":59.90,\"method\":\"PIX\"}"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/payments/webhook resolves a payment without gateway headers")
+    void shouldAcceptWebhookWithoutAuthHeaders() throws Exception {
+        Payment approved = Payment.builder().id(1L).orderId(10L).amount(new BigDecimal("59.90"))
+                .method(Payment.PaymentMethod.PIX).status(Payment.PaymentStatus.APPROVED).build();
+        when(paymentService.resolve(10L, Payment.PaymentStatus.APPROVED)).thenReturn(approved);
+
+        mockMvc.perform(post("/api/v1/payments/webhook")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"orderId\":10,\"status\":\"APPROVED\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("APPROVED"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/payments/webhook returns 404 for an unknown order")
+    void shouldReturn404WhenWebhookOrderMissing() throws Exception {
+        when(paymentService.resolve(99L, Payment.PaymentStatus.REJECTED))
+                .thenThrow(new RuntimeException("Pagamento não encontrado para este pedido"));
+
+        mockMvc.perform(post("/api/v1/payments/webhook")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"orderId\":99,\"status\":\"REJECTED\"}"))
+                .andExpect(status().isNotFound());
     }
 }

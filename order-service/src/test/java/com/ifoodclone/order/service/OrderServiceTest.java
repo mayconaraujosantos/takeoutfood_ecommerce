@@ -138,8 +138,8 @@ class OrderServiceTest {
     class CheckoutTests {
 
         @Test
-        @DisplayName("Should move to CONFIRMED when payment is approved")
-        void shouldConfirmOnApprovedPayment() {
+        @DisplayName("Should stay PENDING_PAYMENT when the gateway accepts the charge for async processing")
+        void shouldStayPendingWhenGatewayAcceptsCharge() {
             Order order = Order.builder().id(1L).userId(1L).restaurantId(10L).status(OrderStatus.CART)
                     .totalAmount(new BigDecimal("39.90")).build();
             order.getItems().add(OrderItem.builder().id(1L).order(order).menuItemId(5L)
@@ -147,16 +147,18 @@ class OrderServiceTest {
             when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
             when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            PaymentResult approved = new PaymentResult();
-            approved.setStatus("APPROVED");
-            when(paymentClient.charge(eq(1L), any(BigDecimal.class), eq("PIX"))).thenReturn(approved);
+            PaymentResult pending = new PaymentResult();
+            pending.setStatus("PENDING");
+            when(paymentClient.charge(eq(1L), any(BigDecimal.class), eq("PIX"))).thenReturn(pending);
 
             Order result = orderService.checkout(1L, OrderDto.CheckoutRequest.builder()
                     .deliveryAddress("Rua Teste, 123")
                     .paymentMethod(Order.PaymentMethod.PIX)
                     .build());
 
-            assertThat(result.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
+            // CONFIRMED only happens later, when PaymentEventListener consumes the
+            // gateway's webhook-triggered payment-events message -- not exercised here.
+            assertThat(result.getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
         }
 
         @Test
